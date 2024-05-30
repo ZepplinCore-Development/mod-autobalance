@@ -1410,6 +1410,7 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
     }
     if(EnableExpasionMode){ // this will pull new values if expansionMode is enabled
          Expac whichExpac = CheckForExpac(mapId); // checks the map id against a list of instances/raid sorted by expansion
+         inflectionValue = (float)maxNumberOfPlayers;
          switch(whichExpac){
          case VANILLA:
             if (instanceMap->IsHeroic())
@@ -1555,7 +1556,7 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
                         {
                                 inflectionValue *= bossInflectionPointMultiplier;
                         }
-             }
+                }
          break;
          case THE_BURNING_CRUSADES:
             if (instanceMap->IsHeroic())
@@ -1867,7 +1868,6 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
         if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
         if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
     }
-
     return AutoBalanceInflectionPointSettings(inflectionValue, curveFloor, curveCeiling);
 }
 
