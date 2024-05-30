@@ -967,6 +967,302 @@ AutoBalance.reward.MinPlayerReward = 1
 #        Default:     1 (1 = ON, 0 = OFF)
 AutoBalanceAnnounce.enable=1
 
+
+##########################
+#
+# Expansion specific tuning
+#
+##########################
+
+######
+#
+#	Enable expansion specific mode
+#       Default:     1 (1 = ON, 0 = OFF)
+#
+######
+
+AutoBalanceExpansionMode.enable=1
+
+
+
+# The Burning Crusade specific configs
+
+#inflections
+
+### 5-player dungeons
+AutoBalance.InflectionPoint.tbc=0.5
+AutoBalance.InflectionPoint.CurveFloor.tbc=0.0
+AutoBalance.InflectionPoint.CurveCeiling.tbc=1.0
+AutoBalance.InflectionPoint.BossModifier.tbc=1.0
+
+### 5-player heroic dungeons
+AutoBalance.InflectionPointHeroic.tbc=0.5
+AutoBalance.InflectionPointHeroic.CurveFloor.tbc=0.0
+AutoBalance.InflectionPointHeroic.CurveCeiling.tbc=1.0
+AutoBalance.InflectionPointHeroic.BossModifier.tbc=1.0
+
+### Default for all raids
+AutoBalance.InflectionPointRaid.tbc=0.5
+AutoBalance.InflectionPointRaid.CurveFloor.tbc=0.0
+AutoBalance.InflectionPointRaid.CurveCeiling.tbc=1.0
+AutoBalance.InflectionPointRaid.BossModifier.tbc=1.0
+
+### Default for all heroic raids
+AutoBalance.InflectionPointRaidHeroic.tbc=0.5
+AutoBalance.InflectionPointRaidHeroic.CurveFloor.tbc=0.0
+AutoBalance.InflectionPointRaidHeroic.CurveCeiling.tbc=1.0
+AutoBalance.InflectionPointRaidHeroic.BossModifier.tbc=1.0
+
+###
+### By default, all instances use the settings configured above. To customize settings for
+### a particular instance size or difficulty, set the variables below. If the variable is
+### blank, the broader settings above will apply.
+###
+
+### 10-player raids
+AutoBalance.InflectionPointRaid10M.tbc=
+AutoBalance.InflectionPointRaid10M.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid10M.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid10M.BossModifier.tbc=
+
+### 10-player heroic raids
+AutoBalance.InflectionPointRaid10MHeroic.tbc=
+AutoBalance.InflectionPointRaid10MHeroic.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid10MHeroic.BossModifier.tbc=
+
+### 15-player raids
+AutoBalance.InflectionPointRaid15M.tbc=
+AutoBalance.InflectionPointRaid15M.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid15M.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid15M.BossModifier.tbc=
+
+### 20-player raids
+AutoBalance.InflectionPointRaid20M.tbc=
+AutoBalance.InflectionPointRaid20M.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid20M.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid20M.BossModifier.tbc=
+
+### 25-player raids
+AutoBalance.InflectionPointRaid25M.tbc=
+AutoBalance.InflectionPointRaid25M.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid25M.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid25M.BossModifier.tbc=
+
+### 25-player heroic raids
+AutoBalance.InflectionPointRaid25MHeroic.tbc=
+AutoBalance.InflectionPointRaid25MHeroic.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid25MHeroic.BossModifier.tbc=
+
+### 40-player raids
+AutoBalance.InflectionPointRaid40M.tbc=
+AutoBalance.InflectionPointRaid40M.CurveFloor.tbc=
+AutoBalance.InflectionPointRaid40M.CurveCeiling.tbc=
+AutoBalance.InflectionPointRaid40M.BossModifier.tbc=
+
+# Stat mods
+
+### 5-player dungeons
+AutoBalance.StatModifier.tbc.Global=1.0
+AutoBalance.StatModifier.tbc.Health=1.0
+AutoBalance.StatModifier.tbc.Mana=1.0
+AutoBalance.StatModifier.tbc.Armor=1.0
+AutoBalance.StatModifier.tbc.Damage=1.0
+
+
+AutoBalance.StatModifier.Boss.tbc.Global=1.0
+AutoBalance.StatModifier.Boss.tbc.Health=1.0
+AutoBalance.StatModifier.Boss.tbc.Mana=1.0
+AutoBalance.StatModifier.Boss.tbc.Armor=1.0
+AutoBalance.StatModifier.Boss.tbc.Damage=1.0
+
+### 5-player heroic dungeons
+AutoBalance.StatModifierHeroic.tbc.Global=1.0
+AutoBalance.StatModifierHeroic.tbc.Health=1.0
+AutoBalance.StatModifierHeroic.tbc.Mana=1.0
+AutoBalance.StatModifierHeroic.tbc.Armor=1.0
+AutoBalance.StatModifierHeroic.tbc.Damage=1.0
+
+AutoBalance.StatModifierHeroic.Boss.tbc.Global=1.0
+AutoBalance.StatModifierHeroic.Boss.tbc.Health=1.0
+AutoBalance.StatModifierHeroic.Boss.tbc.Mana=1.0
+AutoBalance.StatModifierHeroic.Boss.tbc.Armor=1.0
+AutoBalance.StatModifierHeroic.Boss.tbc.Damage=1.0
+
+### Default for all raids
+AutoBalance.StatModifierRaid.tbc.Global=1.0
+AutoBalance.StatModifierRaid.tbc.Health=1.0
+AutoBalance.StatModifierRaid.tbc.Mana=1.0
+AutoBalance.StatModifierRaid.tbc.Armor=1.0
+AutoBalance.StatModifierRaid.tbc.Damage=1.0
+
+AutoBalance.StatModifierRaid.Boss.tbc.Global=1.0
+AutoBalance.StatModifierRaid.Boss.tbc.Health=1.0
+AutoBalance.StatModifierRaid.Boss.tbc.Mana=1.0
+AutoBalance.StatModifierRaid.Boss.tbc.Armor=1.0
+AutoBalance.StatModifierRaid.Boss.tbc.Damage=1.0
+
+### Default for all heroic raids
+AutoBalance.StatModifierRaidHeroic.tbc.Global=1.0
+AutoBalance.StatModifierRaidHeroic.tbc.Health=1.0
+AutoBalance.StatModifierRaidHeroic.tbc.Mana=1.0
+AutoBalance.StatModifierRaidHeroic.tbc.Armor=1.0
+AutoBalance.StatModifierRaidHeroic.tbc.Damage=1.0
+
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.Global=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.Health=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.Mana=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.Armor=1.0
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.Damage=1.0
+
+###
+### By default, all instances use the settings configured above. To customize settings for
+### a particular instance size or difficulty, set the variables below. If the variable is
+### blank, the broader settings above will apply.
+###
+
+### 10-player raids
+AutoBalance.StatModifierRaid10M.tbc.Global=
+AutoBalance.StatModifierRaid10M.tbc.Health=
+AutoBalance.StatModifierRaid10M.tbc.Mana=
+AutoBalance.StatModifierRaid10M.tbc.Armor=
+AutoBalance.StatModifierRaid10M.tbc.Damage=
+
+AutoBalance.StatModifierRaid10M.Boss.tbc.Global=
+AutoBalance.StatModifierRaid10M.Boss.tbc.Health=
+AutoBalance.StatModifierRaid10M.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid10M.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid10M.Boss.tbc.Damage=
+
+### 10-player heroic raids
+AutoBalance.StatModifierRaid10MHeroic.tbc.Global=
+AutoBalance.StatModifierRaid10MHeroic.tbc.Health=
+AutoBalance.StatModifierRaid10MHeroic.tbc.Mana=
+AutoBalance.StatModifierRaid10MHeroic.tbc.Armor=
+AutoBalance.StatModifierRaid10MHeroic.tbc.Damage=
+
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Global=
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Health=
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Damage=
+
+### 15-player raids
+AutoBalance.StatModifierRaid15M.tbc.Global=
+AutoBalance.StatModifierRaid15M.tbc.Health=
+AutoBalance.StatModifierRaid15M.tbc.Mana=
+AutoBalance.StatModifierRaid15M.tbc.Armor=
+AutoBalance.StatModifierRaid15M.tbc.Damage=
+
+AutoBalance.StatModifierRaid15M.Boss.tbc.Global=
+AutoBalance.StatModifierRaid15M.Boss.tbc.Health=
+AutoBalance.StatModifierRaid15M.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid15M.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid15M.Boss.tbc.Damage=
+
+### 20-player raids
+AutoBalance.StatModifierRaid20M.tbc.Global=
+AutoBalance.StatModifierRaid20M.tbc.Health=
+AutoBalance.StatModifierRaid20M.tbc.Mana=
+AutoBalance.StatModifierRaid20M.tbc.Armor=
+AutoBalance.StatModifierRaid20M.tbc.Damage=
+
+AutoBalance.StatModifierRaid20M.Boss.tbc.Global=
+AutoBalance.StatModifierRaid20M.Boss.tbc.Health=
+AutoBalance.StatModifierRaid20M.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid20M.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid20M.Boss.tbc.Damage=
+
+### 25-player raids
+AutoBalance.StatModifierRaid25M.tbc.Global=
+AutoBalance.StatModifierRaid25M.tbc.Health=
+AutoBalance.StatModifierRaid25M.tbc.Mana=
+AutoBalance.StatModifierRaid25M.tbc.Armor=
+AutoBalance.StatModifierRaid25M.tbc.Damage=
+
+AutoBalance.StatModifierRaid25M.Boss.tbc.Global=
+AutoBalance.StatModifierRaid25M.Boss.tbc.Health=
+AutoBalance.StatModifierRaid25M.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid25M.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid25M.Boss.tbc.Damage=
+
+### 25-player heroic raids
+AutoBalance.StatModifierRaid25MHeroic.tbc.Global=
+AutoBalance.StatModifierRaid25MHeroic.tbc.Health=
+AutoBalance.StatModifierRaid25MHeroic.tbc.Mana=
+AutoBalance.StatModifierRaid25MHeroic.tbc.Armor=
+AutoBalance.StatModifierRaid25MHeroic.tbc.Damage=
+
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Global=
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Health=
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Damage=
+
+### 40-player raids
+AutoBalance.StatModifierRaid40M.tbc.Global=
+AutoBalance.StatModifierRaid40M.tbc.Health=
+AutoBalance.StatModifierRaid40M.tbc.Mana=
+AutoBalance.StatModifierRaid40M.tbc.Armor=
+AutoBalance.StatModifierRaid40M.tbc.Damage=
+
+AutoBalance.StatModifierRaid40M.Boss.tbc.Global=
+AutoBalance.StatModifierRaid40M.Boss.tbc.Health=
+AutoBalance.StatModifierRaid40M.Boss.tbc.Mana=
+AutoBalance.StatModifierRaid40M.Boss.tbc.Armor=
+AutoBalance.StatModifierRaid40M.Boss.tbc.Damage=
+
+### 5-player dungeons
+AutoBalance.StatModifier.tbc.CCDuration=
+AutoBalance.StatModifier.Boss.tbc.CCDuration=
+
+### 5-player heroic dungeons
+AutoBalance.StatModifierHeroic.tbc.CCDuration=
+AutoBalance.StatModifierHeroic.Boss.tbc.CCDuration=
+
+### Default for all raids
+AutoBalance.StatModifierRaid.tbc.CCDuration=
+AutoBalance.StatModifierRaid.Boss.tbc.CCDuration=
+
+### Default for all heroic raids
+AutoBalance.StatModifierRaidHeroic.tbc.CCDuration=
+AutoBalance.StatModifierRaidHeroic.Boss.tbc.CCDuration=
+
+###
+### Configuring the CCDuration settings above this line will affect all dungeons and raids.
+### To customize settings for a particular instance size, add your value to the settings below.
+###
+
+### 10-player raids
+AutoBalance.StatModifierRaid10M.tbc.CCDuration=
+AutoBalance.StatModifierRaid10M.Boss.tbc.CCDuration=
+
+### 10-player heroic raids
+AutoBalance.StatModifierRaid10MHeroic.tbc.CCDuration=
+AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.CCDuration=
+
+### 15-player raids
+AutoBalance.StatModifierRaid15M.tbc.CCDuration=
+AutoBalance.StatModifierRaid15M.Boss.tbc.CCDuration=
+
+### 20-player raids
+AutoBalance.StatModifierRaid20M.tbc.CCDuration=
+AutoBalance.StatModifierRaid20M.Boss.tbc.CCDuration=
+
+### 25-player raids
+AutoBalance.StatModifierRaid25M.tbc.CCDuration=
+AutoBalance.StatModifierRaid25M.Boss.tbc.CCDuration=
+
+### 25-player heroic raids
+AutoBalance.StatModifierRaid25MHeroic.tbc.CCDuration=
+AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.CCDuration=
+
+### 40-player raids
+AutoBalance.StatModifierRaid40M.tbc.CCDuration=
+AutoBalance.StatModifierRaid40M.Boss.tbc.CCDuration=
+
+
 ##########################
 #
 # Deprecated Settings

@@ -45,13 +45,16 @@
 #include "Group.h"
 #include "Log.h"
 #include "SharedDefines.h"
+#include "instance_list.h"
 #include <chrono>
+
 
 #if AC_COMPILER == AC_COMPILER_GNU
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 using namespace Acore::ChatCommands;
+
 
 enum ScalingMethod {
     AUTOBALANCE_SCALING_FIXED,
@@ -73,6 +76,13 @@ enum Damage_Healing_Debug_Phase {
     AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_BEFORE,
     AUTOBALANCE_DAMAGE_HEALING_DEBUG_PHASE_AFTER
 };
+
+enum Expac {
+    VANILLA,
+    THE_BURNING_CRUSADES,
+    WRATH_OF_THE_LICH_KING
+};
+
 
 struct World_Multipliers {
     float scaled = 1.0f;
@@ -113,6 +123,28 @@ bool ABScriptMgr::OnAfterDefaultMultiplier(Creature *creature, float& defaultMul
     }
 
     return true;
+}
+
+
+Expac CheckForExpac(uint32 toCheck) {
+    for (int i = 0; i < instanceIdList::vanilla.size(); i++) {
+        if (toCheck == instanceIdList::vanilla[i]) {
+            return Expac::VANILLA;
+        }
+    }
+    for (int i = 0; i < instanceIdList::the_burning_crusades.size(); i++) {
+        if (toCheck == instanceIdList::the_burning_crusades[i]) {
+            return Expac::THE_BURNING_CRUSADES;
+        }
+    }
+    for (int i = 0; i < instanceIdList::Wrath_of_the_lich_king.size(); i++) {
+        if (toCheck == instanceIdList::Wrath_of_the_lich_king[i]) {
+            return Expac::WRATH_OF_THE_LICH_KING;
+        }
+    }
+
+    return Expac::VANILLA;
+
 }
 
 bool ABScriptMgr::OnBeforeUpdateStats(Creature* creature, uint32& scaledHealth, uint32& scaledMana, float& damageMultiplier, uint32& newBaseArmor)
@@ -358,7 +390,7 @@ static bool EnableGlobal;
 static bool Enable5M, Enable10M, Enable15M, Enable20M, Enable25M, Enable40M;
 static bool Enable5MHeroic, Enable10MHeroic, Enable25MHeroic;
 static bool EnableOtherNormal, EnableOtherHeroic;
-
+static bool EnableExpasionMode;
 // InflectionPoint*
 static float InflectionPoint, InflectionPointCurveFloor, InflectionPointCurveCeiling, InflectionPointBoss;
 static float InflectionPointHeroic, InflectionPointHeroicCurveFloor, InflectionPointHeroicCurveCeiling, InflectionPointHeroicBoss;
@@ -400,6 +432,132 @@ static float StatModifierRaid20M_Boss_Global, StatModifierRaid20M_Boss_Health, S
 static float StatModifierRaid25M_Boss_Global, StatModifierRaid25M_Boss_Health, StatModifierRaid25M_Boss_Mana, StatModifierRaid25M_Boss_Armor, StatModifierRaid25M_Boss_Damage, StatModifierRaid25M_Boss_CCDuration;
 static float StatModifierRaid25MHeroic_Boss_Global, StatModifierRaid25MHeroic_Boss_Health, StatModifierRaid25MHeroic_Boss_Mana, StatModifierRaid25MHeroic_Boss_Armor, StatModifierRaid25MHeroic_Boss_Damage, StatModifierRaid25MHeroic_Boss_CCDuration;
 static float StatModifierRaid40M_Boss_Global, StatModifierRaid40M_Boss_Health, StatModifierRaid40M_Boss_Mana, StatModifierRaid40M_Boss_Armor, StatModifierRaid40M_Boss_Damage, StatModifierRaid40M_Boss_CCDuration;
+
+// InflectionPoint* vanilla
+static float InflectionPoint_vanilla, InflectionPointCurveFloor_vanilla, InflectionPointCurveCeiling_vanilla, InflectionPointBoss_vanilla;
+static float InflectionPointHeroic_vanilla, InflectionPointHeroicCurveFloor_vanilla, InflectionPointHeroicCurveCeiling_vanilla, InflectionPointHeroicBoss_vanilla;
+static float InflectionPointRaid_vanilla, InflectionPointRaidCurveFloor_vanilla, InflectionPointRaidCurveCeiling_vanilla, InflectionPointRaidBoss_vanilla;
+static float InflectionPointRaidHeroic_vanilla, InflectionPointRaidHeroicCurveFloor_vanilla, InflectionPointRaidHeroicCurveCeiling_vanilla, InflectionPointRaidHeroicBoss_vanilla;
+
+static float InflectionPointRaid10M_vanilla, InflectionPointRaid10MCurveFloor_vanilla, InflectionPointRaid10MCurveCeiling_vanilla, InflectionPointRaid10MBoss_vanilla;
+static float InflectionPointRaid10MHeroic_vanilla, InflectionPointRaid10MHeroicCurveFloor_vanilla, InflectionPointRaid10MHeroicCurveCeiling_vanilla, InflectionPointRaid10MHeroicBoss_vanilla;
+static float InflectionPointRaid15M_vanilla, InflectionPointRaid15MCurveFloor_vanilla, InflectionPointRaid15MCurveCeiling_vanilla, InflectionPointRaid15MBoss_vanilla;
+static float InflectionPointRaid20M_vanilla, InflectionPointRaid20MCurveFloor_vanilla, InflectionPointRaid20MCurveCeiling_vanilla, InflectionPointRaid20MBoss_vanilla;
+static float InflectionPointRaid25M_vanilla, InflectionPointRaid25MCurveFloor_vanilla, InflectionPointRaid25MCurveCeiling_vanilla, InflectionPointRaid25MBoss_vanilla;
+static float InflectionPointRaid25MHeroic_vanilla, InflectionPointRaid25MHeroicCurveFloor_vanilla, InflectionPointRaid25MHeroicCurveCeiling_vanilla, InflectionPointRaid25MHeroicBoss_vanilla;
+static float InflectionPointRaid40M_vanilla, InflectionPointRaid40MCurveFloor_vanilla, InflectionPointRaid40MCurveCeiling_vanilla, InflectionPointRaid40MBoss_vanilla;
+
+// StatModifier* vanilla
+static float StatModifier_vanilla_Global, StatModifier_vanilla_Health, StatModifier_vanilla_Mana, StatModifier_vanilla_Armor, StatModifier_vanilla_Damage, StatModifier_vanilla_CCDuration;
+static float StatModifierHeroic_vanilla_Global, StatModifierHeroic_vanilla_Health, StatModifierHeroic_vanilla_Mana, StatModifierHeroic_vanilla_Armor, StatModifierHeroic_vanilla_Damage, StatModifierHeroic_vanilla_CCDuration;
+static float StatModifierRaid_vanilla_Global, StatModifierRaid_vanilla_Health, StatModifierRaid_vanilla_Mana, StatModifierRaid_vanilla_Armor, StatModifierRaid_vanilla_Damage, StatModifierRaid_vanilla_CCDuration;
+static float StatModifierRaidHeroic_vanilla_Global, StatModifierRaidHeroic_vanilla_Health, StatModifierRaidHeroic_vanilla_Mana, StatModifierRaidHeroic_vanilla_Armor, StatModifierRaidHeroic_vanilla_Damage, StatModifierRaidHeroic_vanilla_CCDuration;
+
+static float StatModifierRaid10M_vanilla_Global, StatModifierRaid10M_vanilla_Health, StatModifierRaid10M_vanilla_Mana, StatModifierRaid10M_vanilla_Armor, StatModifierRaid10M_vanilla_Damage, StatModifierRaid10M_vanilla_CCDuration;
+static float StatModifierRaid10MHeroic_vanilla_Global, StatModifierRaid10MHeroic_vanilla_Health, StatModifierRaid10MHeroic_vanilla_Mana, StatModifierRaid10MHeroic_vanilla_Armor, StatModifierRaid10MHeroic_vanilla_Damage, StatModifierRaid10MHeroic_vanilla_CCDuration;
+static float StatModifierRaid15M_vanilla_Global, StatModifierRaid15M_vanilla_Health, StatModifierRaid15M_vanilla_Mana, StatModifierRaid15M_vanilla_Armor, StatModifierRaid15M_vanilla_Damage, StatModifierRaid15M_vanilla_CCDuration;
+static float StatModifierRaid20M_vanilla_Global, StatModifierRaid20M_vanilla_Health, StatModifierRaid20M_vanilla_Mana, StatModifierRaid20M_vanilla_Armor, StatModifierRaid20M_vanilla_Damage, StatModifierRaid20M_vanilla_CCDuration;
+static float StatModifierRaid25M_vanilla_Global, StatModifierRaid25M_vanilla_Health, StatModifierRaid25M_vanilla_Mana, StatModifierRaid25M_vanilla_Armor, StatModifierRaid25M_vanilla_Damage, StatModifierRaid25M_vanilla_CCDuration;
+static float StatModifierRaid25MHeroic_vanilla_Global, StatModifierRaid25MHeroic_vanilla_Health, StatModifierRaid25MHeroic_vanilla_Mana, StatModifierRaid25MHeroic_vanilla_Armor, StatModifierRaid25MHeroic_vanilla_Damage, StatModifierRaid25MHeroic_vanilla_CCDuration;
+static float StatModifierRaid40M_vanilla_Global, StatModifierRaid40M_vanilla_Health, StatModifierRaid40M_vanilla_Mana, StatModifierRaid40M_vanilla_Armor, StatModifierRaid40M_vanilla_Damage, StatModifierRaid40M_vanilla_CCDuration;
+
+// StatModifier* (Boss) vanilla
+static float StatModifier_Boss_vanilla_Global, StatModifier_Boss_vanilla_Health, StatModifier_Boss_vanilla_Mana, StatModifier_Boss_vanilla_Armor, StatModifier_Boss_vanilla_Damage, StatModifier_Boss_vanilla_CCDuration;
+static float StatModifierHeroic_Boss_vanilla_Global, StatModifierHeroic_Boss_vanilla_Health, StatModifierHeroic_Boss_vanilla_Mana, StatModifierHeroic_Boss_vanilla_Armor, StatModifierHeroic_Boss_vanilla_Damage, StatModifierHeroic_Boss_vanilla_CCDuration;
+static float StatModifierRaid_Boss_vanilla_Global, StatModifierRaid_Boss_vanilla_Health, StatModifierRaid_Boss_vanilla_Mana, StatModifierRaid_Boss_vanilla_Armor, StatModifierRaid_Boss_vanilla_Damage, StatModifierRaid_Boss_vanilla_CCDuration;
+static float StatModifierRaidHeroic_Boss_vanilla_Global, StatModifierRaidHeroic_Boss_vanilla_Health, StatModifierRaidHeroic_Boss_vanilla_Mana, StatModifierRaidHeroic_Boss_vanilla_Armor, StatModifierRaidHeroic_Boss_vanilla_Damage, StatModifierRaidHeroic_Boss_vanilla_CCDuration;
+
+static float StatModifierRaid10M_Boss_vanilla_Global, StatModifierRaid10M_Boss_vanilla_Health, StatModifierRaid10M_Boss_vanilla_Mana, StatModifierRaid10M_Boss_vanilla_Armor, StatModifierRaid10M_Boss_vanilla_Damage, StatModifierRaid10M_Boss_vanilla_CCDuration;
+static float StatModifierRaid10MHeroic_Boss_vanilla_Global, StatModifierRaid10MHeroic_Boss_vanilla_Health, StatModifierRaid10MHeroic_Boss_vanilla_Mana, StatModifierRaid10MHeroic_Boss_vanilla_Armor, StatModifierRaid10MHeroic_Boss_vanilla_Damage, StatModifierRaid10MHeroic_Boss_vanilla_CCDuration;
+static float StatModifierRaid15M_Boss_vanilla_Global, StatModifierRaid15M_Boss_vanilla_Health, StatModifierRaid15M_Boss_vanilla_Mana, StatModifierRaid15M_Boss_vanilla_Armor, StatModifierRaid15M_Boss_vanilla_Damage, StatModifierRaid15M_Boss_vanilla_CCDuration;
+static float StatModifierRaid20M_Boss_vanilla_Global, StatModifierRaid20M_Boss_vanilla_Health, StatModifierRaid20M_Boss_vanilla_Mana, StatModifierRaid20M_Boss_vanilla_Armor, StatModifierRaid20M_Boss_vanilla_Damage, StatModifierRaid20M_Boss_vanilla_CCDuration;
+static float StatModifierRaid25M_Boss_vanilla_Global, StatModifierRaid25M_Boss_vanilla_Health, StatModifierRaid25M_Boss_vanilla_Mana, StatModifierRaid25M_Boss_vanilla_Armor, StatModifierRaid25M_Boss_vanilla_Damage, StatModifierRaid25M_Boss_vanilla_CCDuration;
+static float StatModifierRaid25MHeroic_Boss_vanilla_Global, StatModifierRaid25MHeroic_Boss_vanilla_Health, StatModifierRaid25MHeroic_Boss_vanilla_Mana, StatModifierRaid25MHeroic_Boss_vanilla_Armor, StatModifierRaid25MHeroic_Boss_vanilla_Damage, StatModifierRaid25MHeroic_Boss_vanilla_CCDuration;
+static float StatModifierRaid40M_Boss_vanilla_Global, StatModifierRaid40M_Boss_vanilla_Health, StatModifierRaid40M_Boss_vanilla_Mana, StatModifierRaid40M_Boss_vanilla_Armor, StatModifierRaid40M_Boss_vanilla_Damage, StatModifierRaid40M_Boss_vanilla_CCDuration;
+
+// InflectionPoint* tbc
+static float InflectionPoint_tbc, InflectionPointCurveFloor_tbc, InflectionPointCurveCeiling_tbc, InflectionPointBoss_tbc;
+static float InflectionPointHeroic_tbc, InflectionPointHeroicCurveFloor_tbc, InflectionPointHeroicCurveCeiling_tbc, InflectionPointHeroicBoss_tbc;
+static float InflectionPointRaid_tbc, InflectionPointRaidCurveFloor_tbc, InflectionPointRaidCurveCeiling_tbc, InflectionPointRaidBoss_tbc;
+static float InflectionPointRaidHeroic_tbc, InflectionPointRaidHeroicCurveFloor_tbc, InflectionPointRaidHeroicCurveCeiling_tbc, InflectionPointRaidHeroicBoss_tbc;
+
+static float InflectionPointRaid10M_tbc, InflectionPointRaid10MCurveFloor_tbc, InflectionPointRaid10MCurveCeiling_tbc, InflectionPointRaid10MBoss_tbc;
+static float InflectionPointRaid10MHeroic_tbc, InflectionPointRaid10MHeroicCurveFloor_tbc, InflectionPointRaid10MHeroicCurveCeiling_tbc, InflectionPointRaid10MHeroicBoss_tbc;
+static float InflectionPointRaid15M_tbc, InflectionPointRaid15MCurveFloor_tbc, InflectionPointRaid15MCurveCeiling_tbc, InflectionPointRaid15MBoss_tbc;
+static float InflectionPointRaid20M_tbc, InflectionPointRaid20MCurveFloor_tbc, InflectionPointRaid20MCurveCeiling_tbc, InflectionPointRaid20MBoss_tbc;
+static float InflectionPointRaid25M_tbc, InflectionPointRaid25MCurveFloor_tbc, InflectionPointRaid25MCurveCeiling_tbc, InflectionPointRaid25MBoss_tbc;
+static float InflectionPointRaid25MHeroic_tbc, InflectionPointRaid25MHeroicCurveFloor_tbc, InflectionPointRaid25MHeroicCurveCeiling_tbc, InflectionPointRaid25MHeroicBoss_tbc;
+static float InflectionPointRaid40M_tbc, InflectionPointRaid40MCurveFloor_tbc, InflectionPointRaid40MCurveCeiling_tbc, InflectionPointRaid40MBoss_tbc;
+
+// StatModifier* tbc
+static float StatModifier_tbc_Global, StatModifier_tbc_Health, StatModifier_tbc_Mana, StatModifier_tbc_Armor, StatModifier_tbc_Damage, StatModifier_tbc_CCDuration;
+static float StatModifierHeroic_tbc_Global, StatModifierHeroic_tbc_Health, StatModifierHeroic_tbc_Mana, StatModifierHeroic_tbc_Armor, StatModifierHeroic_tbc_Damage, StatModifierHeroic_tbc_CCDuration;
+static float StatModifierRaid_tbc_Global, StatModifierRaid_tbc_Health, StatModifierRaid_tbc_Mana, StatModifierRaid_tbc_Armor, StatModifierRaid_tbc_Damage, StatModifierRaid_tbc_CCDuration;
+static float StatModifierRaidHeroic_tbc_Global, StatModifierRaidHeroic_tbc_Health, StatModifierRaidHeroic_tbc_Mana, StatModifierRaidHeroic_tbc_Armor, StatModifierRaidHeroic_tbc_Damage, StatModifierRaidHeroic_tbc_CCDuration;
+
+static float StatModifierRaid10M_tbc_Global, StatModifierRaid10M_tbc_Health, StatModifierRaid10M_tbc_Mana, StatModifierRaid10M_tbc_Armor, StatModifierRaid10M_tbc_Damage, StatModifierRaid10M_tbc_CCDuration;
+static float StatModifierRaid10MHeroic_tbc_Global, StatModifierRaid10MHeroic_tbc_Health, StatModifierRaid10MHeroic_tbc_Mana, StatModifierRaid10MHeroic_tbc_Armor, StatModifierRaid10MHeroic_tbc_Damage, StatModifierRaid10MHeroic_tbc_CCDuration;
+static float StatModifierRaid15M_tbc_Global, StatModifierRaid15M_tbc_Health, StatModifierRaid15M_tbc_Mana, StatModifierRaid15M_tbc_Armor, StatModifierRaid15M_tbc_Damage, StatModifierRaid15M_tbc_CCDuration;
+static float StatModifierRaid20M_tbc_Global, StatModifierRaid20M_tbc_Health, StatModifierRaid20M_tbc_Mana, StatModifierRaid20M_tbc_Armor, StatModifierRaid20M_tbc_Damage, StatModifierRaid20M_tbc_CCDuration;
+static float StatModifierRaid25M_tbc_Global, StatModifierRaid25M_tbc_Health, StatModifierRaid25M_tbc_Mana, StatModifierRaid25M_tbc_Armor, StatModifierRaid25M_tbc_Damage, StatModifierRaid25M_tbc_CCDuration;
+static float StatModifierRaid25MHeroic_tbc_Global, StatModifierRaid25MHeroic_tbc_Health, StatModifierRaid25MHeroic_tbc_Mana, StatModifierRaid25MHeroic_tbc_Armor, StatModifierRaid25MHeroic_tbc_Damage, StatModifierRaid25MHeroic_tbc_CCDuration;
+static float StatModifierRaid40M_tbc_Global, StatModifierRaid40M_tbc_Health, StatModifierRaid40M_tbc_Mana, StatModifierRaid40M_tbc_Armor, StatModifierRaid40M_tbc_Damage, StatModifierRaid40M_tbc_CCDuration;
+
+// StatModifier* (Boss) tbc
+static float StatModifier_Boss_tbc_Global, StatModifier_Boss_tbc_Health, StatModifier_Boss_tbc_Mana, StatModifier_Boss_tbc_Armor, StatModifier_Boss_tbc_Damage, StatModifier_Boss_tbc_CCDuration;
+static float StatModifierHeroic_Boss_tbc_Global, StatModifierHeroic_Boss_tbc_Health, StatModifierHeroic_Boss_tbc_Mana, StatModifierHeroic_Boss_tbc_Armor, StatModifierHeroic_Boss_tbc_Damage, StatModifierHeroic_Boss_tbc_CCDuration;
+static float StatModifierRaid_Boss_tbc_Global, StatModifierRaid_Boss_tbc_Health, StatModifierRaid_Boss_tbc_Mana, StatModifierRaid_Boss_tbc_Armor, StatModifierRaid_Boss_tbc_Damage, StatModifierRaid_Boss_tbc_CCDuration;
+static float StatModifierRaidHeroic_Boss_tbc_Global, StatModifierRaidHeroic_Boss_tbc_Health, StatModifierRaidHeroic_Boss_tbc_Mana, StatModifierRaidHeroic_Boss_tbc_Armor, StatModifierRaidHeroic_Boss_tbc_Damage, StatModifierRaidHeroic_Boss_tbc_CCDuration;
+
+static float StatModifierRaid10M_Boss_tbc_Global, StatModifierRaid10M_Boss_tbc_Health, StatModifierRaid10M_Boss_tbc_Mana, StatModifierRaid10M_Boss_tbc_Armor, StatModifierRaid10M_Boss_tbc_Damage, StatModifierRaid10M_Boss_tbc_CCDuration;
+static float StatModifierRaid10MHeroic_Boss_tbc_Global, StatModifierRaid10MHeroic_Boss_tbc_Health, StatModifierRaid10MHeroic_Boss_tbc_Mana, StatModifierRaid10MHeroic_Boss_tbc_Armor, StatModifierRaid10MHeroic_Boss_tbc_Damage, StatModifierRaid10MHeroic_Boss_tbc_CCDuration;
+static float StatModifierRaid15M_Boss_tbc_Global, StatModifierRaid15M_Boss_tbc_Health, StatModifierRaid15M_Boss_tbc_Mana, StatModifierRaid15M_Boss_tbc_Armor, StatModifierRaid15M_Boss_tbc_Damage, StatModifierRaid15M_Boss_tbc_CCDuration;
+static float StatModifierRaid20M_Boss_tbc_Global, StatModifierRaid20M_Boss_tbc_Health, StatModifierRaid20M_Boss_tbc_Mana, StatModifierRaid20M_Boss_tbc_Armor, StatModifierRaid20M_Boss_tbc_Damage, StatModifierRaid20M_Boss_tbc_CCDuration;
+static float StatModifierRaid25M_Boss_tbc_Global, StatModifierRaid25M_Boss_tbc_Health, StatModifierRaid25M_Boss_tbc_Mana, StatModifierRaid25M_Boss_tbc_Armor, StatModifierRaid25M_Boss_tbc_Damage, StatModifierRaid25M_Boss_tbc_CCDuration;
+static float StatModifierRaid25MHeroic_Boss_tbc_Global, StatModifierRaid25MHeroic_Boss_tbc_Health, StatModifierRaid25MHeroic_Boss_tbc_Mana, StatModifierRaid25MHeroic_Boss_tbc_Armor, StatModifierRaid25MHeroic_Boss_tbc_Damage, StatModifierRaid25MHeroic_Boss_tbc_CCDuration;
+static float StatModifierRaid40M_Boss_tbc_Global, StatModifierRaid40M_Boss_tbc_Health, StatModifierRaid40M_Boss_tbc_Mana, StatModifierRaid40M_Boss_tbc_Armor, StatModifierRaid40M_Boss_tbc_Damage, StatModifierRaid40M_Boss_tbc_CCDuration;
+
+// InflectionPoint* Wrath of the lich king
+static float InflectionPoint_wotlk, InflectionPointCurveFloor_wotlk, InflectionPointCurveCeiling_wotlk, InflectionPointBoss_wotlk;
+static float InflectionPointHeroic_wotlk, InflectionPointHeroicCurveFloor_wotlk, InflectionPointHeroicCurveCeiling_wotlk, InflectionPointHeroicBoss_wotlk;
+static float InflectionPointRaid_wotlk, InflectionPointRaidCurveFloor_wotlk, InflectionPointRaidCurveCeiling_wotlk, InflectionPointRaidBoss_wotlk;
+static float InflectionPointRaidHeroic_wotlk, InflectionPointRaidHeroicCurveFloor_wotlk, InflectionPointRaidHeroicCurveCeiling_wotlk, InflectionPointRaidHeroicBoss_wotlk;
+
+static float InflectionPointRaid10M_wotlk, InflectionPointRaid10MCurveFloor_wotlk, InflectionPointRaid10MCurveCeiling_wotlk, InflectionPointRaid10MBoss_wotlk;
+static float InflectionPointRaid10MHeroic_wotlk, InflectionPointRaid10MHeroicCurveFloor_wotlk, InflectionPointRaid10MHeroicCurveCeiling_wotlk, InflectionPointRaid10MHeroicBoss_wotlk;
+static float InflectionPointRaid15M_wotlk, InflectionPointRaid15MCurveFloor_wotlk, InflectionPointRaid15MCurveCeiling_wotlk, InflectionPointRaid15MBoss_wotlk;
+static float InflectionPointRaid20M_wotlk, InflectionPointRaid20MCurveFloor_wotlk, InflectionPointRaid20MCurveCeiling_wotlk, InflectionPointRaid20MBoss_wotlk;
+static float InflectionPointRaid25M_wotlk, InflectionPointRaid25MCurveFloor_wotlk, InflectionPointRaid25MCurveCeiling_wotlk, InflectionPointRaid25MBoss_wotlk;
+static float InflectionPointRaid25MHeroic_wotlk, InflectionPointRaid25MHeroicCurveFloor_wotlk, InflectionPointRaid25MHeroicCurveCeiling_wotlk, InflectionPointRaid25MHeroicBoss_wotlk;
+static float InflectionPointRaid40M_wotlk, InflectionPointRaid40MCurveFloor_wotlk, InflectionPointRaid40MCurveCeiling_wotlk, InflectionPointRaid40MBoss_wotlk;
+
+// StatModifier* Wrath of the lich king
+static float StatModifier_wotlk_Global, StatModifier_wotlk_Health, StatModifier_wotlk_Mana, StatModifier_wotlk_Armor, StatModifier_wotlk_Damage, StatModifier_wotlk_CCDuration;
+static float StatModifierHeroic_wotlk_Global, StatModifierHeroic_wotlk_Health, StatModifierHeroic_wotlk_Mana, StatModifierHeroic_wotlk_Armor, StatModifierHeroic_wotlk_Damage, StatModifierHeroic_wotlk_CCDuration;
+static float StatModifierRaid_wotlk_Global, StatModifierRaid_wotlk_Health, StatModifierRaid_wotlk_Mana, StatModifierRaid_wotlk_Armor, StatModifierRaid_wotlk_Damage, StatModifierRaid_wotlk_CCDuration;
+static float StatModifierRaidHeroic_wotlk_Global, StatModifierRaidHeroic_wotlk_Health, StatModifierRaidHeroic_wotlk_Mana, StatModifierRaidHeroic_wotlk_Armor, StatModifierRaidHeroic_wotlk_Damage, StatModifierRaidHeroic_wotlk_CCDuration;
+
+static float StatModifierRaid10M_wotlk_Global, StatModifierRaid10M_wotlk_Health, StatModifierRaid10M_wotlk_Mana, StatModifierRaid10M_wotlk_Armor, StatModifierRaid10M_wotlk_Damage, StatModifierRaid10M_wotlk_CCDuration;
+static float StatModifierRaid10MHeroic_wotlk_Global, StatModifierRaid10MHeroic_wotlk_Health, StatModifierRaid10MHeroic_wotlk_Mana, StatModifierRaid10MHeroic_wotlk_Armor, StatModifierRaid10MHeroic_wotlk_Damage, StatModifierRaid10MHeroic_wotlk_CCDuration;
+static float StatModifierRaid15M_wotlk_Global, StatModifierRaid15M_wotlk_Health, StatModifierRaid15M_wotlk_Mana, StatModifierRaid15M_wotlk_Armor, StatModifierRaid15M_wotlk_Damage, StatModifierRaid15M_wotlk_CCDuration;
+static float StatModifierRaid20M_wotlk_Global, StatModifierRaid20M_wotlk_Health, StatModifierRaid20M_wotlk_Mana, StatModifierRaid20M_wotlk_Armor, StatModifierRaid20M_wotlk_Damage, StatModifierRaid20M_wotlk_CCDuration;
+static float StatModifierRaid25M_wotlk_Global, StatModifierRaid25M_wotlk_Health, StatModifierRaid25M_wotlk_Mana, StatModifierRaid25M_wotlk_Armor, StatModifierRaid25M_wotlk_Damage, StatModifierRaid25M_wotlk_CCDuration;
+static float StatModifierRaid25MHeroic_wotlk_Global, StatModifierRaid25MHeroic_wotlk_Health, StatModifierRaid25MHeroic_wotlk_Mana, StatModifierRaid25MHeroic_wotlk_Armor, StatModifierRaid25MHeroic_wotlk_Damage, StatModifierRaid25MHeroic_wotlk_CCDuration;
+static float StatModifierRaid40M_wotlk_Global, StatModifierRaid40M_wotlk_Health, StatModifierRaid40M_wotlk_Mana, StatModifierRaid40M_wotlk_Armor, StatModifierRaid40M_wotlk_Damage, StatModifierRaid40M_wotlk_CCDuration;
+
+// StatModifier* (Boss) Wrath of the lich king
+static float StatModifier_Boss_wotlk_Global, StatModifier_Boss_wotlk_Health, StatModifier_Boss_wotlk_Mana, StatModifier_Boss_wotlk_Armor, StatModifier_Boss_wotlk_Damage, StatModifier_Boss_wotlk_CCDuration;
+static float StatModifierHeroic_Boss_wotlk_Global, StatModifierHeroic_Boss_wotlk_Health, StatModifierHeroic_Boss_wotlk_Mana, StatModifierHeroic_Boss_wotlk_Armor, StatModifierHeroic_Boss_wotlk_Damage, StatModifierHeroic_Boss_wotlk_CCDuration;
+static float StatModifierRaid_Boss_wotlk_Global, StatModifierRaid_Boss_wotlk_Health, StatModifierRaid_Boss_wotlk_Mana, StatModifierRaid_Boss_wotlk_Armor, StatModifierRaid_Boss_wotlk_Damage, StatModifierRaid_Boss_wotlk_CCDuration;
+static float StatModifierRaidHeroic_Boss_wotlk_Global, StatModifierRaidHeroic_Boss_wotlk_Health, StatModifierRaidHeroic_Boss_wotlk_Mana, StatModifierRaidHeroic_Boss_wotlk_Armor, StatModifierRaidHeroic_Boss_wotlk_Damage, StatModifierRaidHeroic_Boss_wotlk_CCDuration;
+
+static float StatModifierRaid10M_Boss_wotlk_Global, StatModifierRaid10M_Boss_wotlk_Health, StatModifierRaid10M_Boss_wotlk_Mana, StatModifierRaid10M_Boss_wotlk_Armor, StatModifierRaid10M_Boss_wotlk_Damage, StatModifierRaid10M_Boss_wotlk_CCDuration;
+static float StatModifierRaid10MHeroic_Boss_wotlk_Global, StatModifierRaid10MHeroic_Boss_wotlk_Health, StatModifierRaid10MHeroic_Boss_wotlk_Mana, StatModifierRaid10MHeroic_Boss_wotlk_Armor, StatModifierRaid10MHeroic_Boss_wotlk_Damage, StatModifierRaid10MHeroic_Boss_wotlk_CCDuration;
+static float StatModifierRaid15M_Boss_wotlk_Global, StatModifierRaid15M_Boss_wotlk_Health, StatModifierRaid15M_Boss_wotlk_Mana, StatModifierRaid15M_Boss_wotlk_Armor, StatModifierRaid15M_Boss_wotlk_Damage, StatModifierRaid15M_Boss_wotlk_CCDuration;
+static float StatModifierRaid20M_Boss_wotlk_Global, StatModifierRaid20M_Boss_wotlk_Health, StatModifierRaid20M_Boss_wotlk_Mana, StatModifierRaid20M_Boss_wotlk_Armor, StatModifierRaid20M_Boss_wotlk_Damage, StatModifierRaid20M_Boss_wotlk_CCDuration;
+static float StatModifierRaid25M_Boss_wotlk_Global, StatModifierRaid25M_Boss_wotlk_Health, StatModifierRaid25M_Boss_wotlk_Mana, StatModifierRaid25M_Boss_wotlk_Armor, StatModifierRaid25M_Boss_wotlk_Damage, StatModifierRaid25M_Boss_wotlk_CCDuration;
+static float StatModifierRaid25MHeroic_Boss_wotlk_Global, StatModifierRaid25MHeroic_Boss_wotlk_Health, StatModifierRaid25MHeroic_Boss_wotlk_Mana, StatModifierRaid25MHeroic_Boss_wotlk_Armor, StatModifierRaid25MHeroic_Boss_wotlk_Damage, StatModifierRaid25MHeroic_Boss_wotlk_CCDuration;
+static float StatModifierRaid40M_Boss_wotlk_Global, StatModifierRaid40M_Boss_wotlk_Health, StatModifierRaid40M_Boss_wotlk_Mana, StatModifierRaid40M_Boss_wotlk_Armor, StatModifierRaid40M_Boss_wotlk_Damage, StatModifierRaid40M_Boss_wotlk_CCDuration;
 
 std::list<uint32> LoadDisabledDungeons(std::string dungeonIdString) // Used for reading the string from the configuration file for selectively disabling dungeons
 {
@@ -1091,6 +1249,7 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
     uint32 mapId = instanceMap->GetEntry()->MapID;
 
     float inflectionValue, curveFloor, curveCeiling;
+    float bossInflectionPointMultiplier;
 
     inflectionValue  = (float)maxNumberOfPlayers;
 
@@ -1170,28 +1329,12 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
         }
     }
 
-    // Per map ID overrides alter the above settings, if set
-    if (hasDungeonOverride(mapId))
-    {
-        AutoBalanceInflectionPointSettings* myInflectionPointOverrides = &dungeonOverrides[mapId];
-
-        // Alter the inflectionValue according to the override, if set
-        if (myInflectionPointOverrides->value != -1)
-        {
-            inflectionValue  = (float)maxNumberOfPlayers; // Starting over
-            inflectionValue *= myInflectionPointOverrides->value;
-        }
-
-        if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
-        if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
-    }
-
     //
     // Boss Inflection Point
     //
     if (isBoss) {
 
-        float bossInflectionPointMultiplier;
+    
 
         if (instanceMap->IsHeroic())
         {
@@ -1243,8 +1386,7 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
                 bossInflectionPointMultiplier = InflectionPointRaidBoss;
             }
         }
-
-        // Per map ID overrides alter the above settings, if set
+            // Per map ID overrides alter the above settings, if set
         if (hasBossOverride(mapId))
         {
             AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
@@ -1263,8 +1405,467 @@ AutoBalanceInflectionPointSettings getInflectionPointSettings (InstanceMap* inst
         // No override, use the value determined by the instance type
         else
         {
-            inflectionValue *= bossInflectionPointMultiplier;
+                inflectionValue *= bossInflectionPointMultiplier;
         }
+    }
+    if(EnableExpasionMode){ // this will pull new values if expansionMode is enabled
+         Expac whichExpac = CheckForExpac(mapId); // checks the map id against a list of instances/raid sorted by expansion
+         switch(whichExpac){
+         case VANILLA:
+            if (instanceMap->IsHeroic())
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPointHeroic_vanilla;
+                    curveFloor = InflectionPointHeroicCurveFloor_vanilla;
+                    curveCeiling = InflectionPointHeroicCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10MHeroic_vanilla;
+                    curveFloor = InflectionPointRaid10MHeroicCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid10MHeroicCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25MHeroic_vanilla;
+                    curveFloor = InflectionPointRaid25MHeroicCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid25MHeroicCurveCeiling_vanilla;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaidHeroic_vanilla;
+                    curveFloor = InflectionPointRaidHeroicCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaidHeroicCurveCeiling_vanilla;
+                }
+            }
+            else
+                {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPoint_vanilla;
+                    curveFloor = InflectionPointCurveFloor_vanilla;
+                    curveCeiling = InflectionPointCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10M_vanilla;
+                    curveFloor = InflectionPointRaid10MCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid10MCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    inflectionValue *= InflectionPointRaid15M_vanilla;
+                    curveFloor = InflectionPointRaid15MCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid15MCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    inflectionValue *= InflectionPointRaid20M_vanilla;
+                    curveFloor = InflectionPointRaid20MCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid20MCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25M_vanilla;
+                    curveFloor = InflectionPointRaid25MCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid25MCurveCeiling_vanilla;
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    inflectionValue *= InflectionPointRaid40M_vanilla;
+                    curveFloor = InflectionPointRaid40MCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaid40MCurveCeiling_vanilla;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaid_vanilla;
+                    curveFloor = InflectionPointRaidCurveFloor_vanilla;
+                    curveCeiling = InflectionPointRaidCurveCeiling_vanilla;
+                }
+                }
+            if (isBoss) {
+                if (instanceMap->IsHeroic())
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointHeroicBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss_vanilla;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss_vanilla;
+                    }
+                }
+                else
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 15)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid15MBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 20)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid20MBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MBoss_vanilla;
+                    }
+                    else if (maxNumberOfPlayers <= 40)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid40MBoss_vanilla;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidBoss_vanilla;
+                    }
+                }
+                    if (hasBossOverride(mapId))
+                        {
+                            AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
+
+                            // If set, alter the inflectionValue according to the override
+                            if (myBossOverrides->value != -1)
+                            {
+                                inflectionValue *= myBossOverrides->value;
+                            }
+                            // Otherwise, calculate using the value determined by instance type
+                            else
+                            {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                            }
+                        }
+                        // No override, use the value determined by the instance type
+                        else
+                        {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                        }
+             }
+         break;
+         case THE_BURNING_CRUSADES:
+            if (instanceMap->IsHeroic())
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPointHeroic_tbc;
+                    curveFloor = InflectionPointHeroicCurveFloor_tbc;
+                    curveCeiling = InflectionPointHeroicCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10MHeroic_tbc;
+                    curveFloor = InflectionPointRaid10MHeroicCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid10MHeroicCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25MHeroic_tbc;
+                    curveFloor = InflectionPointRaid25MHeroicCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid25MHeroicCurveCeiling_tbc;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaidHeroic_tbc;
+                    curveFloor = InflectionPointRaidHeroicCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaidHeroicCurveCeiling_tbc;
+                }
+            }
+            else
+                {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPoint_tbc;
+                    curveFloor = InflectionPointCurveFloor_tbc;
+                    curveCeiling = InflectionPointCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10M_tbc;
+                    curveFloor = InflectionPointRaid10MCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid10MCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    inflectionValue *= InflectionPointRaid15M_tbc;
+                    curveFloor = InflectionPointRaid15MCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid15MCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    inflectionValue *= InflectionPointRaid20M_tbc;
+                    curveFloor = InflectionPointRaid20MCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid20MCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25M_tbc;
+                    curveFloor = InflectionPointRaid25MCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid25MCurveCeiling_tbc;
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    inflectionValue *= InflectionPointRaid40M_tbc;
+                    curveFloor = InflectionPointRaid40MCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaid40MCurveCeiling_tbc;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaid_tbc;
+                    curveFloor = InflectionPointRaidCurveFloor_tbc;
+                    curveCeiling = InflectionPointRaidCurveCeiling_tbc;
+                }
+                }
+            if (isBoss) {
+                if (instanceMap->IsHeroic())
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointHeroicBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss_tbc;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss_tbc;
+                    }
+                }
+                else
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 15)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid15MBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 20)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid20MBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MBoss_tbc;
+                    }
+                    else if (maxNumberOfPlayers <= 40)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid40MBoss_tbc;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidBoss_tbc;
+                    }
+                }
+                    if (hasBossOverride(mapId))
+                        {
+                            AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
+
+                            // If set, alter the inflectionValue according to the override
+                            if (myBossOverrides->value != -1)
+                            {
+                                inflectionValue *= myBossOverrides->value;
+                            }
+                            // Otherwise, calculate using the value determined by instance type
+                            else
+                            {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                            }
+                        }
+                        // No override, use the value determined by the instance type
+                        else
+                        {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                        }
+             }
+         break;
+         case WRATH_OF_THE_LICH_KING:
+            if (instanceMap->IsHeroic())
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPointHeroic_wotlk;
+                    curveFloor = InflectionPointHeroicCurveFloor_wotlk;
+                    curveCeiling = InflectionPointHeroicCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10MHeroic_wotlk;
+                    curveFloor = InflectionPointRaid10MHeroicCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid10MHeroicCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25MHeroic_wotlk;
+                    curveFloor = InflectionPointRaid25MHeroicCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid25MHeroicCurveCeiling_wotlk;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaidHeroic_wotlk;
+                    curveFloor = InflectionPointRaidHeroicCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaidHeroicCurveCeiling_wotlk;
+                }
+            }
+            else
+                {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    inflectionValue *= InflectionPoint_wotlk;
+                    curveFloor = InflectionPointCurveFloor_wotlk;
+                    curveCeiling = InflectionPointCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    inflectionValue *= InflectionPointRaid10M_wotlk;
+                    curveFloor = InflectionPointRaid10MCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid10MCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    inflectionValue *= InflectionPointRaid15M_wotlk;
+                    curveFloor = InflectionPointRaid15MCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid15MCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    inflectionValue *= InflectionPointRaid20M_wotlk;
+                    curveFloor = InflectionPointRaid20MCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid20MCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    inflectionValue *= InflectionPointRaid25M_wotlk;
+                    curveFloor = InflectionPointRaid25MCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid25MCurveCeiling_wotlk;
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    inflectionValue *= InflectionPointRaid40M_wotlk;
+                    curveFloor = InflectionPointRaid40MCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaid40MCurveCeiling_wotlk;
+                }
+                else
+                {
+                    inflectionValue *= InflectionPointRaid_wotlk;
+                    curveFloor = InflectionPointRaidCurveFloor_wotlk;
+                    curveCeiling = InflectionPointRaidCurveCeiling_wotlk;
+                }
+                }
+            if (isBoss) {
+                if (instanceMap->IsHeroic())
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointHeroicBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MHeroicBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MHeroicBoss_wotlk;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidHeroicBoss_wotlk;
+                    }
+                }
+                else
+                {
+                    if (maxNumberOfPlayers <= 5)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 10)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid10MBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 15)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid15MBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 20)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid20MBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 25)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid25MBoss_wotlk;
+                    }
+                    else if (maxNumberOfPlayers <= 40)
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaid40MBoss_wotlk;
+                    }
+                    else
+                    {
+                        bossInflectionPointMultiplier = InflectionPointRaidBoss_wotlk;
+                    }
+                }
+                    if (hasBossOverride(mapId))
+                        {
+                            AutoBalanceInflectionPointSettings* myBossOverrides = &bossOverrides[mapId];
+
+                            // If set, alter the inflectionValue according to the override
+                            if (myBossOverrides->value != -1)
+                            {
+                                inflectionValue *= myBossOverrides->value;
+                            }
+                            // Otherwise, calculate using the value determined by instance type
+                            else
+                            {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                            }
+                        }
+                        // No override, use the value determined by the instance type
+                        else
+                        {
+                                inflectionValue *= bossInflectionPointMultiplier;
+                        }
+             }
+         break;
+        }
+    }
+
+        // Per map ID overrides alter the above settings, if set
+    if (hasDungeonOverride(mapId))
+    {
+        AutoBalanceInflectionPointSettings* myInflectionPointOverrides = &dungeonOverrides[mapId];
+
+        // Alter the inflectionValue according to the override, if set
+        if (myInflectionPointOverrides->value != -1)
+        {
+            inflectionValue  = (float)maxNumberOfPlayers; // Starting over
+            inflectionValue *= myInflectionPointOverrides->value;
+        }
+
+        if (myInflectionPointOverrides->curveFloor != -1)   { curveFloor =    myInflectionPointOverrides->curveFloor;   }
+        if (myInflectionPointOverrides->curveCeiling != -1) { curveCeiling =  myInflectionPointOverrides->curveCeiling; }
     }
 
     return AutoBalanceInflectionPointSettings(inflectionValue, curveFloor, curveCeiling);
@@ -1600,6 +2201,863 @@ AutoBalanceStatModifiers getStatModifiers (Map* map, Creature* creature = nullpt
 
                 getStatModifiersDebug(map, creature, "?? Player Normal");
             }
+        }
+    }
+
+    //expac specific scaling
+    if(EnableExpasionMode){
+        Expac whichExpac = CheckForExpac(mapId);
+        switch(whichExpac){
+            case VANILLA:
+            if (instanceMap->IsHeroic()) // heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierHeroic_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierHeroic_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierHeroic_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierHeroic_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierHeroic_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierHeroic_vanilla_Global;
+                        statModifiers.health = StatModifierHeroic_vanilla_Health;
+                        statModifiers.mana = StatModifierHeroic_vanilla_Mana;
+                        statModifiers.armor = StatModifierHeroic_vanilla_Armor;
+                        statModifiers.damage = StatModifierHeroic_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_vanilla_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_vanilla_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic");
+                    }
+                }
+                else
+            {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaidHeroic_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_vanilla_Global;
+                        statModifiers.health = StatModifierRaidHeroic_vanilla_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic");
+                    }
+                }
+            }
+            else // non-heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifier_Boss_vanilla_Global;
+                        statModifiers.health = StatModifier_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifier_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifier_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifier_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifier_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifier_vanilla_Global;
+                        statModifiers.health = StatModifier_vanilla_Health;
+                        statModifiers.mana = StatModifier_vanilla_Mana;
+                        statModifiers.armor = StatModifier_vanilla_Armor;
+                        statModifiers.damage = StatModifier_vanilla_Damage;
+                        statModifiers.ccduration = StatModifier_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal tbc");
+                    }              
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10M_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid10M_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid10M_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid10M_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid10M_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal Boss tbc");
+                    }
+                    else
+                    {       
+                        statModifiers.global = StatModifierRaid10M_vanilla_Global;
+                        statModifiers.health = StatModifierRaid10M_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid10M_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid10M_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid10M_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid15M_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid15M_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid15M_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid15M_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid15M_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid15M_vanilla_Global;
+                        statModifiers.health = StatModifierRaid15M_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid15M_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid15M_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid15M_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid20M_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid20M_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid20M_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid20M_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid20M_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid20M_vanilla_Global;
+                        statModifiers.health = StatModifierRaid20M_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid20M_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid20M_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid20M_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25M_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid25M_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid25M_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid25M_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid25M_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25M_vanilla_Global;
+                        statModifiers.health = StatModifierRaid25M_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid25M_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid25M_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid25M_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid40M_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid40M_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid40M_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid40M_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid40M_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid40M_vanilla_Global;
+                        statModifiers.health = StatModifierRaid40M_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid40M_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid40M_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid40M_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal tbc");
+                    }
+                }
+                else
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid_Boss_vanilla_Global;
+                        statModifiers.health = StatModifierRaid_Boss_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid_Boss_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid_Boss_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid_Boss_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid_Boss_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid_vanilla_Global;
+                        statModifiers.health = StatModifierRaid_vanilla_Health;
+                        statModifiers.mana = StatModifierRaid_vanilla_Mana;
+                        statModifiers.armor = StatModifierRaid_vanilla_Armor;
+                        statModifiers.damage = StatModifierRaid_vanilla_Damage;
+                        statModifiers.ccduration = StatModifierRaid_vanilla_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal tbc");
+                    }
+                }
+            }
+            break;
+            case THE_BURNING_CRUSADES:
+            if (instanceMap->IsHeroic()) // heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierHeroic_Boss_tbc_Global;
+                        statModifiers.health = StatModifierHeroic_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierHeroic_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierHeroic_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierHeroic_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierHeroic_tbc_Global;
+                        statModifiers.health = StatModifierHeroic_tbc_Health;
+                        statModifiers.mana = StatModifierHeroic_tbc_Mana;
+                        statModifiers.armor = StatModifierHeroic_tbc_Armor;
+                        statModifiers.damage = StatModifierHeroic_tbc_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_tbc_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_tbc_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_tbc_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_tbc_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic");
+                    }
+                }
+                else
+            {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaidHeroic_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_tbc_Global;
+                        statModifiers.health = StatModifierRaidHeroic_tbc_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_tbc_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_tbc_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic");
+                    }
+                }
+            }
+            else // non-heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifier_Boss_tbc_Global;
+                        statModifiers.health = StatModifier_Boss_tbc_Health;
+                        statModifiers.mana = StatModifier_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifier_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifier_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifier_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifier_tbc_Global;
+                        statModifiers.health = StatModifier_tbc_Health;
+                        statModifiers.mana = StatModifier_tbc_Mana;
+                        statModifiers.armor = StatModifier_tbc_Armor;
+                        statModifiers.damage = StatModifier_tbc_Damage;
+                        statModifiers.ccduration = StatModifier_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal tbc");
+                    }              
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10M_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid10M_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid10M_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid10M_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid10M_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal Boss tbc");
+                    }
+                    else
+                    {       
+                        statModifiers.global = StatModifierRaid10M_tbc_Global;
+                        statModifiers.health = StatModifierRaid10M_tbc_Health;
+                        statModifiers.mana = StatModifierRaid10M_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid10M_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid10M_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid15M_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid15M_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid15M_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid15M_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid15M_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid15M_tbc_Global;
+                        statModifiers.health = StatModifierRaid15M_tbc_Health;
+                        statModifiers.mana = StatModifierRaid15M_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid15M_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid15M_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid20M_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid20M_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid20M_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid20M_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid20M_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid20M_tbc_Global;
+                        statModifiers.health = StatModifierRaid20M_tbc_Health;
+                        statModifiers.mana = StatModifierRaid20M_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid20M_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid20M_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25M_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid25M_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid25M_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid25M_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid25M_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25M_tbc_Global;
+                        statModifiers.health = StatModifierRaid25M_tbc_Health;
+                        statModifiers.mana = StatModifierRaid25M_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid25M_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid25M_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid40M_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid40M_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid40M_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid40M_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid40M_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid40M_tbc_Global;
+                        statModifiers.health = StatModifierRaid40M_tbc_Health;
+                        statModifiers.mana = StatModifierRaid40M_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid40M_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid40M_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal tbc");
+                    }
+                }
+                else
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid_Boss_tbc_Global;
+                        statModifiers.health = StatModifierRaid_Boss_tbc_Health;
+                        statModifiers.mana = StatModifierRaid_Boss_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid_Boss_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid_Boss_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid_Boss_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid_tbc_Global;
+                        statModifiers.health = StatModifierRaid_tbc_Health;
+                        statModifiers.mana = StatModifierRaid_tbc_Mana;
+                        statModifiers.armor = StatModifierRaid_tbc_Armor;
+                        statModifiers.damage = StatModifierRaid_tbc_Damage;
+                        statModifiers.ccduration = StatModifierRaid_tbc_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal tbc");
+                    }
+                }
+            }
+            break;
+            case WRATH_OF_THE_LICH_KING:
+            if (instanceMap->IsHeroic()) // heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierHeroic_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierHeroic_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierHeroic_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierHeroic_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierHeroic_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierHeroic_wotlk_Global;
+                        statModifiers.health = StatModifierHeroic_wotlk_Health;
+                        statModifiers.mana = StatModifierHeroic_wotlk_Mana;
+                        statModifiers.armor = StatModifierHeroic_wotlk_Armor;
+                        statModifiers.damage = StatModifierHeroic_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierHeroic_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid10MHeroic_wotlk_Global;
+                        statModifiers.health = StatModifierRaid10MHeroic_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid10MHeroic_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid10MHeroic_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid10MHeroic_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid10MHeroic_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Heroic");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25MHeroic_wotlk_Global;
+                        statModifiers.health = StatModifierRaid25MHeroic_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid25MHeroic_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid25MHeroic_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid25MHeroic_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid25MHeroic_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Heroic");
+                    }
+                }
+                else
+            {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaidHeroic_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic Boss");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaidHeroic_wotlk_Global;
+                        statModifiers.health = StatModifierRaidHeroic_wotlk_Health;
+                        statModifiers.mana = StatModifierRaidHeroic_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaidHeroic_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaidHeroic_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaidHeroic_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Heroic");
+                    }
+                }
+            }
+            else // non-heroic
+            {
+                if (maxNumberOfPlayers <= 5)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifier_Boss_wotlk_Global;
+                        statModifiers.health = StatModifier_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifier_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifier_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifier_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifier_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifier_wotlk_Global;
+                        statModifiers.health = StatModifier_wotlk_Health;
+                        statModifiers.mana = StatModifier_wotlk_Mana;
+                        statModifiers.armor = StatModifier_wotlk_Armor;
+                        statModifiers.damage = StatModifier_wotlk_Damage;
+                        statModifiers.ccduration = StatModifier_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "1 to 5 Player Normal tbc");
+                    }              
+                }
+                else if (maxNumberOfPlayers <= 10)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid10M_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid10M_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid10M_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid10M_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid10M_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal Boss tbc");
+                    }
+                    else
+                    {       
+                        statModifiers.global = StatModifierRaid10M_wotlk_Global;
+                        statModifiers.health = StatModifierRaid10M_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid10M_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid10M_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid10M_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid10M_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "10 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 15)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid15M_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid15M_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid15M_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid15M_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid15M_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid15M_wotlk_Global;
+                        statModifiers.health = StatModifierRaid15M_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid15M_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid15M_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid15M_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid15M_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "15 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 20)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid20M_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid20M_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid20M_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid20M_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid20M_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid20M_wotlk_Global;
+                        statModifiers.health = StatModifierRaid20M_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid20M_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid20M_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid20M_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid20M_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "20 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 25)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid25M_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid25M_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid25M_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid25M_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid25M_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid25M_wotlk_Global;
+                        statModifiers.health = StatModifierRaid25M_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid25M_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid25M_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid25M_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid25M_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "25 Player Normal tbc");
+                    }
+                }
+                else if (maxNumberOfPlayers <= 40)
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid40M_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid40M_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid40M_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid40M_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid40M_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid40M_wotlk_Global;
+                        statModifiers.health = StatModifierRaid40M_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid40M_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid40M_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid40M_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid40M_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "40 Player Normal tbc");
+                    }
+                }
+                else
+                {
+                    if (creature && isBossOrBossSummon(creature))
+                    {
+                        statModifiers.global = StatModifierRaid_Boss_wotlk_Global;
+                        statModifiers.health = StatModifierRaid_Boss_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid_Boss_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid_Boss_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid_Boss_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid_Boss_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal Boss tbc");
+                    }
+                    else
+                    {
+                        statModifiers.global = StatModifierRaid_wotlk_Global;
+                        statModifiers.health = StatModifierRaid_wotlk_Health;
+                        statModifiers.mana = StatModifierRaid_wotlk_Mana;
+                        statModifiers.armor = StatModifierRaid_wotlk_Armor;
+                        statModifiers.damage = StatModifierRaid_wotlk_Damage;
+                        statModifiers.ccduration = StatModifierRaid_wotlk_CCDuration;
+
+                        getStatModifiersDebug(map, creature, "?? Player Normal tbc");
+                    }
+                }
+            }
+            break;
+
         }
     }
 
@@ -3385,6 +4843,689 @@ class AutoBalance_WorldScript : public WorldScript
         StatModifierRaid40M_Boss_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.Damage", StatModifierRaid_Boss_Damage, false);
         StatModifierRaid40M_Boss_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.CCDuration", StatModifierRaid_Boss_CCDuration, false);
 
+        //vanilla specific
+
+        
+// InflectionPoint* vanilla
+
+        InflectionPoint_vanilla =                           sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.vanilla", 0.5f, false);
+        InflectionPointCurveFloor_vanilla =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor.vanilla", 0.0f, false);
+        InflectionPointCurveCeiling_vanilla =               sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling.vanilla", 1.0f, false);
+        InflectionPointBoss_vanilla =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier.vanilla", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointHeroic_vanilla =                     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.vanilla", 0.5f, false);
+        InflectionPointHeroicCurveFloor_vanilla =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor.vanilla", 0.0f, false);
+        InflectionPointHeroicCurveCeiling_vanilla =         sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling.vanilla", 1.0f, false);
+        InflectionPointHeroicBoss_vanilla =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier.vanilla", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid_vanilla =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.vanilla", 0.5f, false);
+        InflectionPointRaidCurveFloor_vanilla =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor.vanilla", 0.0f, false);
+        InflectionPointRaidCurveCeiling_vanilla =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling.vanilla", 1.0f, false);
+        InflectionPointRaidBoss_vanilla =                   sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier.vanilla", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaidHeroic_vanilla =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.vanilla", 0.5f, false);
+        InflectionPointRaidHeroicCurveFloor_vanilla =       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor.vanilla", 0.0f, false);
+        InflectionPointRaidHeroicCurveCeiling_vanilla =     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling.vanilla", 1.0f, false);
+        InflectionPointRaidHeroicBoss_vanilla =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier.vanilla", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid10M_vanilla =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.vanilla", InflectionPointRaid_vanilla, false);
+        InflectionPointRaid10MCurveFloor_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor.vanilla", InflectionPointRaidCurveFloor_vanilla, false);
+        InflectionPointRaid10MCurveCeiling_vanilla =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling.vanilla", InflectionPointRaidCurveCeiling_vanilla, false);
+        InflectionPointRaid10MBoss_vanilla =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier.vanilla", InflectionPointRaidBoss_vanilla, false);
+
+        InflectionPointRaid10MHeroic_vanilla =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.vanilla", InflectionPointRaidHeroic_vanilla, false);
+        InflectionPointRaid10MHeroicCurveFloor_vanilla =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor.vanilla", InflectionPointRaidHeroicCurveFloor_vanilla, false);
+        InflectionPointRaid10MHeroicCurveCeiling_vanilla =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling.vanilla", InflectionPointRaidHeroicCurveCeiling_vanilla, false);
+        InflectionPointRaid10MHeroicBoss_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier.vanilla", InflectionPointRaidHeroicBoss_vanilla, false);
+
+        InflectionPointRaid15M_vanilla =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.vanilla", InflectionPointRaid_vanilla, false);
+        InflectionPointRaid15MCurveFloor_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor.vanilla", InflectionPointRaidCurveFloor_vanilla, false);
+        InflectionPointRaid15MCurveCeiling_vanilla =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling.vanilla", InflectionPointRaidCurveCeiling_vanilla, false);
+        InflectionPointRaid15MBoss_vanilla =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier.vanilla", InflectionPointRaidBoss_vanilla, false);
+
+        InflectionPointRaid20M_vanilla =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.vanilla", InflectionPointRaid_vanilla, false);
+        InflectionPointRaid20MCurveFloor_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor.vanilla", InflectionPointRaidCurveFloor_vanilla, false);
+        InflectionPointRaid20MCurveCeiling_vanilla =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling.vanilla", InflectionPointRaidCurveCeiling_vanilla, false);
+        InflectionPointRaid20MBoss_vanilla =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier.vanilla", InflectionPointRaidBoss_vanilla, false);
+
+        InflectionPointRaid25M_vanilla =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.vanilla", InflectionPointRaid_vanilla, false);
+        InflectionPointRaid25MCurveFloor_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor.vanilla", InflectionPointRaidCurveFloor_vanilla, false);
+        InflectionPointRaid25MCurveCeiling_vanilla =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling.vanilla", InflectionPointRaidCurveCeiling_vanilla, false);
+        InflectionPointRaid25MBoss_vanilla =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier.vanilla", InflectionPointRaidBoss_vanilla, false);
+
+        InflectionPointRaid25MHeroic_vanilla =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.vanilla", InflectionPointRaidHeroic_vanilla, false);
+        InflectionPointRaid25MHeroicCurveFloor_vanilla =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor.vanilla", InflectionPointRaidHeroicCurveFloor_vanilla, false);
+        InflectionPointRaid25MHeroicCurveCeiling_vanilla =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling.vanilla", InflectionPointRaidHeroicCurveCeiling_vanilla, false);
+        InflectionPointRaid25MHeroicBoss_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier.vanilla", InflectionPointRaidHeroicBoss_vanilla, false);
+
+        InflectionPointRaid40M_vanilla =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.vanilla", InflectionPointRaid_vanilla, false);
+        InflectionPointRaid40MCurveFloor_vanilla =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor.vanilla", InflectionPointRaidCurveFloor_vanilla, false);
+        InflectionPointRaid40MCurveCeiling_vanilla =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling.vanilla", InflectionPointRaidCurveCeiling_vanilla, false);
+        InflectionPointRaid40MBoss_vanilla =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier.vanilla", InflectionPointRaidBoss_vanilla, false);
+
+
+//statmodifiers vanilla
+        // 5-player dungeons
+        StatModifier_vanilla_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_vanilla_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_vanilla_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_vanilla_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_vanilla_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_vanilla_CCDuration =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.vanilla.CCDuration", -1.0f, false);
+
+        StatModifier_Boss_vanilla_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_Boss_vanilla_Health =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_Boss_vanilla_Mana =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_Boss_vanilla_Armor =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Boss_vanilla_Damage =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_Boss_vanilla_CCDuration =              sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.vanilla.CCDuration", -1.0f, false);
+
+        // 5-player heroic dungeons
+        StatModifierHeroic_vanilla_Global =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_vanilla_Health =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_vanilla_Mana =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_vanilla_Armor =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_vanilla_Damage =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_vanilla_CCDuration =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.vanilla.CCDuration", -1.0f, false);
+
+        StatModifierHeroic_Boss_vanilla_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_Boss_vanilla_Health =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_Boss_vanilla_Mana =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_Boss_vanilla_Armor =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_Boss_vanilla_Damage =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_Boss_vanilla_CCDuration =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.vanilla.CCDuration", -1.0f, false);
+
+        // Default for all raids
+        StatModifierRaid_vanilla_Global =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_vanilla_Health =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_vanilla_Mana =                     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_vanilla_Armor =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_vanilla_Damage =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_vanilla_CCDuration =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.vanilla.CCDuration", -1.0f, false);
+
+        StatModifierRaid_Boss_vanilla_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_Boss_vanilla_Health =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_Boss_vanilla_Mana =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_Boss_vanilla_Armor =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_Boss_vanilla_Damage =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_Boss_vanilla_CCDuration =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.vanilla.CCDuration", -1.0f, false);
+
+        // Default for all heroic raids
+        StatModifierRaidHeroic_vanilla_Global =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_vanilla_Health =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_vanilla_Mana =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_vanilla_Armor =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_vanilla_Damage =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_vanilla_CCDuration =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.vanilla.CCDuration", -1.0f, false);
+
+        StatModifierRaidHeroic_Boss_vanilla_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_Boss_vanilla_Health =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_Boss_vanilla_Mana =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_Boss_vanilla_Armor =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_Boss_vanilla_Damage =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_Boss_vanilla_CCDuration =    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.vanilla.CCDuration", -1.0f, false);
+
+        // 10-player raids
+        StatModifierRaid10M_vanilla_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.Global", StatModifierRaid_vanilla_Global, false);
+        StatModifierRaid10M_vanilla_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.Health", StatModifierRaid_vanilla_Health, false);
+        StatModifierRaid10M_vanilla_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.Mana", StatModifierRaid_vanilla_Mana, false);
+        StatModifierRaid10M_vanilla_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.Armor", StatModifierRaid_vanilla_Armor, false);
+        StatModifierRaid10M_vanilla_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.Damage", StatModifierRaid_vanilla_Damage, false);
+        StatModifierRaid10M_vanilla_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.vanilla.CCDuration", StatModifierRaid_vanilla_CCDuration, false);
+
+        StatModifierRaid10M_Boss_vanilla_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.Global", StatModifierRaid_Boss_vanilla_Global, false);
+        StatModifierRaid10M_Boss_vanilla_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.Health", StatModifierRaid_Boss_vanilla_Health, false);
+        StatModifierRaid10M_Boss_vanilla_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.Mana", StatModifierRaid_Boss_vanilla_Mana, false);
+        StatModifierRaid10M_Boss_vanilla_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.Armor", StatModifierRaid_Boss_vanilla_Armor, false);
+        StatModifierRaid10M_Boss_vanilla_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.Damage", StatModifierRaid_Boss_vanilla_Damage, false);
+        StatModifierRaid10M_Boss_vanilla_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.vanilla.CCDuration", StatModifierRaid_Boss_vanilla_CCDuration, false);
+
+        // 10-player heroic raids
+        StatModifierRaid10MHeroic_vanilla_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.Global", StatModifierRaidHeroic_vanilla_Global, false);
+        StatModifierRaid10MHeroic_vanilla_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.Health", StatModifierRaidHeroic_vanilla_Health, false);
+        StatModifierRaid10MHeroic_vanilla_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.Mana", StatModifierRaidHeroic_vanilla_Mana, false);
+        StatModifierRaid10MHeroic_vanilla_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.Armor", StatModifierRaidHeroic_vanilla_Armor, false);
+        StatModifierRaid10MHeroic_vanilla_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.Damage", StatModifierRaidHeroic_vanilla_Damage, false);
+        StatModifierRaid10MHeroic_vanilla_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.vanilla.CCDuration", StatModifierRaidHeroic_vanilla_CCDuration, false);
+
+        StatModifierRaid10MHeroic_Boss_vanilla_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.Global", StatModifierRaidHeroic_Boss_vanilla_Global, false);
+        StatModifierRaid10MHeroic_Boss_vanilla_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.Health", StatModifierRaidHeroic_Boss_vanilla_Health, false);
+        StatModifierRaid10MHeroic_Boss_vanilla_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.Mana", StatModifierRaidHeroic_Boss_vanilla_Mana, false);
+        StatModifierRaid10MHeroic_Boss_vanilla_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.Armor", StatModifierRaidHeroic_Boss_vanilla_Armor, false);
+        StatModifierRaid10MHeroic_Boss_vanilla_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.Damage", StatModifierRaidHeroic_Boss_vanilla_Damage, false);
+        StatModifierRaid10MHeroic_Boss_vanilla_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.vanilla.CCDuration", StatModifierRaidHeroic_Boss_vanilla_CCDuration, false);
+
+        // 15-player raids
+        StatModifierRaid15M_vanilla_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.Global", StatModifierRaid_vanilla_Global, false);
+        StatModifierRaid15M_vanilla_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.Health", StatModifierRaid_vanilla_Health, false);
+        StatModifierRaid15M_vanilla_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.Mana", StatModifierRaid_vanilla_Mana, false);
+        StatModifierRaid15M_vanilla_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.Armor", StatModifierRaid_vanilla_Armor, false);
+        StatModifierRaid15M_vanilla_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.Damage", StatModifierRaid_vanilla_Damage, false);
+        StatModifierRaid15M_vanilla_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.vanilla.CCDuration", StatModifierRaid_vanilla_CCDuration, false);
+
+        StatModifierRaid15M_Boss_vanilla_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.Global", StatModifierRaid_Boss_vanilla_Global, false);
+        StatModifierRaid15M_Boss_vanilla_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.Health", StatModifierRaid_Boss_vanilla_Health, false);
+        StatModifierRaid15M_Boss_vanilla_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.Mana", StatModifierRaid_Boss_vanilla_Mana, false);
+        StatModifierRaid15M_Boss_vanilla_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.Armor", StatModifierRaid_Boss_vanilla_Armor, false);
+        StatModifierRaid15M_Boss_vanilla_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.Damage", StatModifierRaid_Boss_vanilla_Damage, false);
+        StatModifierRaid15M_Boss_vanilla_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.vanilla.CCDuration", StatModifierRaid_Boss_vanilla_CCDuration, false);
+
+        // 20-player raids
+        StatModifierRaid20M_vanilla_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.Global", StatModifierRaid_vanilla_Global, false);
+        StatModifierRaid20M_vanilla_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.Health", StatModifierRaid_vanilla_Health, false);
+        StatModifierRaid20M_vanilla_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.Mana", StatModifierRaid_vanilla_Mana, false);
+        StatModifierRaid20M_vanilla_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.Armor", StatModifierRaid_vanilla_Armor, false);
+        StatModifierRaid20M_vanilla_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.Damage", StatModifierRaid_vanilla_Damage, false);
+        StatModifierRaid20M_vanilla_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.vanilla.CCDuration", StatModifierRaid_vanilla_CCDuration, false);
+
+        StatModifierRaid20M_Boss_vanilla_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.Global", StatModifierRaid_Boss_vanilla_Global, false);
+        StatModifierRaid20M_Boss_vanilla_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.Health", StatModifierRaid_Boss_vanilla_Health, false);
+        StatModifierRaid20M_Boss_vanilla_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.Mana", StatModifierRaid_Boss_vanilla_Mana, false);
+        StatModifierRaid20M_Boss_vanilla_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.Armor", StatModifierRaid_Boss_vanilla_Armor, false);
+        StatModifierRaid20M_Boss_vanilla_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.Damage", StatModifierRaid_Boss_vanilla_Damage, false);
+        StatModifierRaid20M_Boss_vanilla_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.vanilla.CCDuration", StatModifierRaid_Boss_vanilla_CCDuration, false);
+
+        // 25-player raids
+        StatModifierRaid25M_vanilla_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.Global", StatModifierRaid_vanilla_Global, false);
+        StatModifierRaid25M_vanilla_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.Health", StatModifierRaid_vanilla_Health, false);
+        StatModifierRaid25M_vanilla_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.Mana", StatModifierRaid_vanilla_Mana, false);
+        StatModifierRaid25M_vanilla_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.Armor", StatModifierRaid_vanilla_Armor, false);
+        StatModifierRaid25M_vanilla_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.Damage", StatModifierRaid_vanilla_Damage, false);
+        StatModifierRaid25M_vanilla_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.vanilla.CCDuration", StatModifierRaid_vanilla_CCDuration, false);
+
+        StatModifierRaid25M_Boss_vanilla_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.Global", StatModifierRaid_Boss_vanilla_Global, false);
+        StatModifierRaid25M_Boss_vanilla_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.Health", StatModifierRaid_Boss_vanilla_Health, false);
+        StatModifierRaid25M_Boss_vanilla_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.Mana", StatModifierRaid_Boss_vanilla_Mana, false);
+        StatModifierRaid25M_Boss_vanilla_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.Armor", StatModifierRaid_Boss_vanilla_Armor, false);
+        StatModifierRaid25M_Boss_vanilla_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.Damage", StatModifierRaid_Boss_vanilla_Damage, false);
+        StatModifierRaid25M_Boss_vanilla_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.vanilla.CCDuration", StatModifierRaid_Boss_vanilla_CCDuration, false);
+
+        // 25-player heroic raids
+        StatModifierRaid25MHeroic_vanilla_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.Global", StatModifierRaidHeroic_vanilla_Global, false);
+        StatModifierRaid25MHeroic_vanilla_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.Health", StatModifierRaidHeroic_vanilla_Health, false);
+        StatModifierRaid25MHeroic_vanilla_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.Mana", StatModifierRaidHeroic_vanilla_Mana, false);
+        StatModifierRaid25MHeroic_vanilla_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.Armor", StatModifierRaidHeroic_vanilla_Armor, false);
+        StatModifierRaid25MHeroic_vanilla_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.Damage", StatModifierRaidHeroic_vanilla_Damage, false);
+        StatModifierRaid25MHeroic_vanilla_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.vanilla.CCDuration", StatModifierRaidHeroic_vanilla_CCDuration, false);
+
+        StatModifierRaid25MHeroic_Boss_vanilla_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.Global", StatModifierRaidHeroic_Boss_vanilla_Global, false);
+        StatModifierRaid25MHeroic_Boss_vanilla_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.Health", StatModifierRaidHeroic_Boss_vanilla_Health, false);
+        StatModifierRaid25MHeroic_Boss_vanilla_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.Mana", StatModifierRaidHeroic_Boss_vanilla_Mana, false);
+        StatModifierRaid25MHeroic_Boss_vanilla_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.Armor", StatModifierRaidHeroic_Boss_vanilla_Armor, false);
+        StatModifierRaid25MHeroic_Boss_vanilla_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.Damage", StatModifierRaidHeroic_Boss_vanilla_Damage, false);
+        StatModifierRaid25MHeroic_Boss_vanilla_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.vanilla.CCDuration", StatModifierRaidHeroic_Boss_vanilla_CCDuration, false);
+
+        // 40-player raids
+        StatModifierRaid40M_vanilla_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.Global", StatModifierRaid_vanilla_Global, false);
+        StatModifierRaid40M_vanilla_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.Health", StatModifierRaid_vanilla_Health, false);
+        StatModifierRaid40M_vanilla_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.Mana", StatModifierRaid_vanilla_Mana, false);
+        StatModifierRaid40M_vanilla_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.Armor", StatModifierRaid_vanilla_Armor, false);
+        StatModifierRaid40M_vanilla_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.Damage", StatModifierRaid_vanilla_Damage, false);
+        StatModifierRaid40M_vanilla_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.vanilla.CCDuration", StatModifierRaid_vanilla_CCDuration, false);
+
+        StatModifierRaid40M_Boss_vanilla_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.Global", StatModifierRaid_Boss_vanilla_Global, false);
+        StatModifierRaid40M_Boss_vanilla_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.Health", StatModifierRaid_Boss_vanilla_Health, false);
+        StatModifierRaid40M_Boss_vanilla_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.Mana", StatModifierRaid_Boss_vanilla_Mana, false);
+        StatModifierRaid40M_Boss_vanilla_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.Armor", StatModifierRaid_Boss_vanilla_Armor, false);
+        StatModifierRaid40M_Boss_vanilla_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.Damage", StatModifierRaid_Boss_vanilla_Damage, false);
+        StatModifierRaid40M_Boss_vanilla_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.vanilla.CCDuration", StatModifierRaid_Boss_vanilla_CCDuration, false);
+
+
+
+//TBC specific
+        
+// InflectionPoint* tbc
+
+        InflectionPoint_tbc =                           sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.tbc", 0.5f, false);
+        InflectionPointCurveFloor_tbc =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor.tbc", 0.0f, false);
+        InflectionPointCurveCeiling_tbc =               sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling.tbc", 1.0f, false);
+        InflectionPointBoss_tbc =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier.tbc", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointHeroic_tbc =                     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.tbc", 0.5f, false);
+        InflectionPointHeroicCurveFloor_tbc =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor.tbc", 0.0f, false);
+        InflectionPointHeroicCurveCeiling_tbc =         sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling.tbc", 1.0f, false);
+        InflectionPointHeroicBoss_tbc =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier.tbc", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid_tbc =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.tbc", 0.5f, false);
+        InflectionPointRaidCurveFloor_tbc =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor.tbc", 0.0f, false);
+        InflectionPointRaidCurveCeiling_tbc =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling.tbc", 1.0f, false);
+        InflectionPointRaidBoss_tbc =                   sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier.tbc", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaidHeroic_tbc =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.tbc", 0.5f, false);
+        InflectionPointRaidHeroicCurveFloor_tbc =       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor.tbc", 0.0f, false);
+        InflectionPointRaidHeroicCurveCeiling_tbc =     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling.tbc", 1.0f, false);
+        InflectionPointRaidHeroicBoss_tbc =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier.tbc", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid10M_tbc =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.tbc", InflectionPointRaid_tbc, false);
+        InflectionPointRaid10MCurveFloor_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor.tbc", InflectionPointRaidCurveFloor_tbc, false);
+        InflectionPointRaid10MCurveCeiling_tbc =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling.tbc", InflectionPointRaidCurveCeiling_tbc, false);
+        InflectionPointRaid10MBoss_tbc =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier.tbc", InflectionPointRaidBoss_tbc, false);
+
+        InflectionPointRaid10MHeroic_tbc =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.tbc", InflectionPointRaidHeroic_tbc, false);
+        InflectionPointRaid10MHeroicCurveFloor_tbc =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor.tbc", InflectionPointRaidHeroicCurveFloor_tbc, false);
+        InflectionPointRaid10MHeroicCurveCeiling_tbc =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling.tbc", InflectionPointRaidHeroicCurveCeiling_tbc, false);
+        InflectionPointRaid10MHeroicBoss_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier.tbc", InflectionPointRaidHeroicBoss_tbc, false);
+
+        InflectionPointRaid15M_tbc =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.tbc", InflectionPointRaid_tbc, false);
+        InflectionPointRaid15MCurveFloor_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor.tbc", InflectionPointRaidCurveFloor_tbc, false);
+        InflectionPointRaid15MCurveCeiling_tbc =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling.tbc", InflectionPointRaidCurveCeiling_tbc, false);
+        InflectionPointRaid15MBoss_tbc =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier.tbc", InflectionPointRaidBoss_tbc, false);
+
+        InflectionPointRaid20M_tbc =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.tbc", InflectionPointRaid_tbc, false);
+        InflectionPointRaid20MCurveFloor_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor.tbc", InflectionPointRaidCurveFloor_tbc, false);
+        InflectionPointRaid20MCurveCeiling_tbc =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling.tbc", InflectionPointRaidCurveCeiling_tbc, false);
+        InflectionPointRaid20MBoss_tbc =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier.tbc", InflectionPointRaidBoss_tbc, false);
+
+        InflectionPointRaid25M_tbc =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.tbc", InflectionPointRaid_tbc, false);
+        InflectionPointRaid25MCurveFloor_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor.tbc", InflectionPointRaidCurveFloor_tbc, false);
+        InflectionPointRaid25MCurveCeiling_tbc =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling.tbc", InflectionPointRaidCurveCeiling_tbc, false);
+        InflectionPointRaid25MBoss_tbc =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier.tbc", InflectionPointRaidBoss_tbc, false);
+
+        InflectionPointRaid25MHeroic_tbc =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.tbc", InflectionPointRaidHeroic_tbc, false);
+        InflectionPointRaid25MHeroicCurveFloor_tbc =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor.tbc", InflectionPointRaidHeroicCurveFloor_tbc, false);
+        InflectionPointRaid25MHeroicCurveCeiling_tbc =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling.tbc", InflectionPointRaidHeroicCurveCeiling_tbc, false);
+        InflectionPointRaid25MHeroicBoss_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier.tbc", InflectionPointRaidHeroicBoss_tbc, false);
+
+        InflectionPointRaid40M_tbc =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.tbc", InflectionPointRaid_tbc, false);
+        InflectionPointRaid40MCurveFloor_tbc =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor.tbc", InflectionPointRaidCurveFloor_tbc, false);
+        InflectionPointRaid40MCurveCeiling_tbc =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling.tbc", InflectionPointRaidCurveCeiling_tbc, false);
+        InflectionPointRaid40MBoss_tbc =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier.tbc", InflectionPointRaidBoss_tbc, false);
+
+
+//statmodifiers tbc
+        // 5-player dungeons
+        StatModifier_tbc_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_tbc_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_tbc_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_tbc_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_tbc_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_tbc_CCDuration =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.tbc.CCDuration", -1.0f, false);
+
+        StatModifier_Boss_tbc_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_Boss_tbc_Health =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_Boss_tbc_Mana =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_Boss_tbc_Armor =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Boss_tbc_Damage =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_Boss_tbc_CCDuration =              sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.tbc.CCDuration", -1.0f, false);
+
+        // 5-player heroic dungeons
+        StatModifierHeroic_tbc_Global =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_tbc_Health =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_tbc_Mana =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_tbc_Armor =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_tbc_Damage =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_tbc_CCDuration =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.tbc.CCDuration", -1.0f, false);
+
+        StatModifierHeroic_Boss_tbc_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_Boss_tbc_Health =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_Boss_tbc_Mana =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_Boss_tbc_Armor =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_Boss_tbc_Damage =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_Boss_tbc_CCDuration =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.tbc.CCDuration", -1.0f, false);
+
+        // Default for all raids
+        StatModifierRaid_tbc_Global =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_tbc_Health =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_tbc_Mana =                     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_tbc_Armor =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_tbc_Damage =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_tbc_CCDuration =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.tbc.CCDuration", -1.0f, false);
+
+        StatModifierRaid_Boss_tbc_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_Boss_tbc_Health =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_Boss_tbc_Mana =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_Boss_tbc_Armor =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_Boss_tbc_Damage =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_Boss_tbc_CCDuration =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.tbc.CCDuration", -1.0f, false);
+
+        // Default for all heroic raids
+        StatModifierRaidHeroic_tbc_Global =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_tbc_Health =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_tbc_Mana =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_tbc_Armor =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_tbc_Damage =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_tbc_CCDuration =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.tbc.CCDuration", -1.0f, false);
+
+        StatModifierRaidHeroic_Boss_tbc_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_Boss_tbc_Health =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_Boss_tbc_Mana =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_Boss_tbc_Armor =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_Boss_tbc_Damage =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_Boss_tbc_CCDuration =    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.tbc.CCDuration", -1.0f, false);
+
+        // 10-player raids
+        StatModifierRaid10M_tbc_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.Global", StatModifierRaid_tbc_Global, false);
+        StatModifierRaid10M_tbc_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.Health", StatModifierRaid_tbc_Health, false);
+        StatModifierRaid10M_tbc_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.Mana", StatModifierRaid_tbc_Mana, false);
+        StatModifierRaid10M_tbc_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.Armor", StatModifierRaid_tbc_Armor, false);
+        StatModifierRaid10M_tbc_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.Damage", StatModifierRaid_tbc_Damage, false);
+        StatModifierRaid10M_tbc_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.tbc.CCDuration", StatModifierRaid_tbc_CCDuration, false);
+
+        StatModifierRaid10M_Boss_tbc_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.Global", StatModifierRaid_Boss_tbc_Global, false);
+        StatModifierRaid10M_Boss_tbc_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.Health", StatModifierRaid_Boss_tbc_Health, false);
+        StatModifierRaid10M_Boss_tbc_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.Mana", StatModifierRaid_Boss_tbc_Mana, false);
+        StatModifierRaid10M_Boss_tbc_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.Armor", StatModifierRaid_Boss_tbc_Armor, false);
+        StatModifierRaid10M_Boss_tbc_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.Damage", StatModifierRaid_Boss_tbc_Damage, false);
+        StatModifierRaid10M_Boss_tbc_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.tbc.CCDuration", StatModifierRaid_Boss_tbc_CCDuration, false);
+
+        // 10-player heroic raids
+        StatModifierRaid10MHeroic_tbc_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.Global", StatModifierRaidHeroic_tbc_Global, false);
+        StatModifierRaid10MHeroic_tbc_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.Health", StatModifierRaidHeroic_tbc_Health, false);
+        StatModifierRaid10MHeroic_tbc_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.Mana", StatModifierRaidHeroic_tbc_Mana, false);
+        StatModifierRaid10MHeroic_tbc_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.Armor", StatModifierRaidHeroic_tbc_Armor, false);
+        StatModifierRaid10MHeroic_tbc_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.Damage", StatModifierRaidHeroic_tbc_Damage, false);
+        StatModifierRaid10MHeroic_tbc_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.tbc.CCDuration", StatModifierRaidHeroic_tbc_CCDuration, false);
+
+        StatModifierRaid10MHeroic_Boss_tbc_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Global", StatModifierRaidHeroic_Boss_tbc_Global, false);
+        StatModifierRaid10MHeroic_Boss_tbc_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Health", StatModifierRaidHeroic_Boss_tbc_Health, false);
+        StatModifierRaid10MHeroic_Boss_tbc_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Mana", StatModifierRaidHeroic_Boss_tbc_Mana, false);
+        StatModifierRaid10MHeroic_Boss_tbc_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Armor", StatModifierRaidHeroic_Boss_tbc_Armor, false);
+        StatModifierRaid10MHeroic_Boss_tbc_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.Damage", StatModifierRaidHeroic_Boss_tbc_Damage, false);
+        StatModifierRaid10MHeroic_Boss_tbc_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.tbc.CCDuration", StatModifierRaidHeroic_Boss_tbc_CCDuration, false);
+
+        // 15-player raids
+        StatModifierRaid15M_tbc_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.Global", StatModifierRaid_tbc_Global, false);
+        StatModifierRaid15M_tbc_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.Health", StatModifierRaid_tbc_Health, false);
+        StatModifierRaid15M_tbc_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.Mana", StatModifierRaid_tbc_Mana, false);
+        StatModifierRaid15M_tbc_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.Armor", StatModifierRaid_tbc_Armor, false);
+        StatModifierRaid15M_tbc_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.Damage", StatModifierRaid_tbc_Damage, false);
+        StatModifierRaid15M_tbc_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.tbc.CCDuration", StatModifierRaid_tbc_CCDuration, false);
+
+        StatModifierRaid15M_Boss_tbc_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.Global", StatModifierRaid_Boss_tbc_Global, false);
+        StatModifierRaid15M_Boss_tbc_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.Health", StatModifierRaid_Boss_tbc_Health, false);
+        StatModifierRaid15M_Boss_tbc_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.Mana", StatModifierRaid_Boss_tbc_Mana, false);
+        StatModifierRaid15M_Boss_tbc_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.Armor", StatModifierRaid_Boss_tbc_Armor, false);
+        StatModifierRaid15M_Boss_tbc_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.Damage", StatModifierRaid_Boss_tbc_Damage, false);
+        StatModifierRaid15M_Boss_tbc_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.tbc.CCDuration", StatModifierRaid_Boss_tbc_CCDuration, false);
+
+        // 20-player raids
+        StatModifierRaid20M_tbc_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.Global", StatModifierRaid_tbc_Global, false);
+        StatModifierRaid20M_tbc_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.Health", StatModifierRaid_tbc_Health, false);
+        StatModifierRaid20M_tbc_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.Mana", StatModifierRaid_tbc_Mana, false);
+        StatModifierRaid20M_tbc_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.Armor", StatModifierRaid_tbc_Armor, false);
+        StatModifierRaid20M_tbc_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.Damage", StatModifierRaid_tbc_Damage, false);
+        StatModifierRaid20M_tbc_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.tbc.CCDuration", StatModifierRaid_tbc_CCDuration, false);
+
+        StatModifierRaid20M_Boss_tbc_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.Global", StatModifierRaid_Boss_tbc_Global, false);
+        StatModifierRaid20M_Boss_tbc_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.Health", StatModifierRaid_Boss_tbc_Health, false);
+        StatModifierRaid20M_Boss_tbc_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.Mana", StatModifierRaid_Boss_tbc_Mana, false);
+        StatModifierRaid20M_Boss_tbc_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.Armor", StatModifierRaid_Boss_tbc_Armor, false);
+        StatModifierRaid20M_Boss_tbc_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.Damage", StatModifierRaid_Boss_tbc_Damage, false);
+        StatModifierRaid20M_Boss_tbc_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.tbc.CCDuration", StatModifierRaid_Boss_tbc_CCDuration, false);
+
+        // 25-player raids
+        StatModifierRaid25M_tbc_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.Global", StatModifierRaid_tbc_Global, false);
+        StatModifierRaid25M_tbc_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.Health", StatModifierRaid_tbc_Health, false);
+        StatModifierRaid25M_tbc_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.Mana", StatModifierRaid_tbc_Mana, false);
+        StatModifierRaid25M_tbc_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.Armor", StatModifierRaid_tbc_Armor, false);
+        StatModifierRaid25M_tbc_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.Damage", StatModifierRaid_tbc_Damage, false);
+        StatModifierRaid25M_tbc_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.tbc.CCDuration", StatModifierRaid_tbc_CCDuration, false);
+
+        StatModifierRaid25M_Boss_tbc_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.Global", StatModifierRaid_Boss_tbc_Global, false);
+        StatModifierRaid25M_Boss_tbc_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.Health", StatModifierRaid_Boss_tbc_Health, false);
+        StatModifierRaid25M_Boss_tbc_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.Mana", StatModifierRaid_Boss_tbc_Mana, false);
+        StatModifierRaid25M_Boss_tbc_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.Armor", StatModifierRaid_Boss_tbc_Armor, false);
+        StatModifierRaid25M_Boss_tbc_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.Damage", StatModifierRaid_Boss_tbc_Damage, false);
+        StatModifierRaid25M_Boss_tbc_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.tbc.CCDuration", StatModifierRaid_Boss_tbc_CCDuration, false);
+
+        // 25-player heroic raids
+        StatModifierRaid25MHeroic_tbc_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.Global", StatModifierRaidHeroic_tbc_Global, false);
+        StatModifierRaid25MHeroic_tbc_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.Health", StatModifierRaidHeroic_tbc_Health, false);
+        StatModifierRaid25MHeroic_tbc_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.Mana", StatModifierRaidHeroic_tbc_Mana, false);
+        StatModifierRaid25MHeroic_tbc_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.Armor", StatModifierRaidHeroic_tbc_Armor, false);
+        StatModifierRaid25MHeroic_tbc_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.Damage", StatModifierRaidHeroic_tbc_Damage, false);
+        StatModifierRaid25MHeroic_tbc_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.tbc.CCDuration", StatModifierRaidHeroic_tbc_CCDuration, false);
+
+        StatModifierRaid25MHeroic_Boss_tbc_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Global", StatModifierRaidHeroic_Boss_tbc_Global, false);
+        StatModifierRaid25MHeroic_Boss_tbc_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Health", StatModifierRaidHeroic_Boss_tbc_Health, false);
+        StatModifierRaid25MHeroic_Boss_tbc_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Mana", StatModifierRaidHeroic_Boss_tbc_Mana, false);
+        StatModifierRaid25MHeroic_Boss_tbc_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Armor", StatModifierRaidHeroic_Boss_tbc_Armor, false);
+        StatModifierRaid25MHeroic_Boss_tbc_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.Damage", StatModifierRaidHeroic_Boss_tbc_Damage, false);
+        StatModifierRaid25MHeroic_Boss_tbc_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.tbc.CCDuration", StatModifierRaidHeroic_Boss_tbc_CCDuration, false);
+
+        // 40-player raids
+        StatModifierRaid40M_tbc_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.Global", StatModifierRaid_tbc_Global, false);
+        StatModifierRaid40M_tbc_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.Health", StatModifierRaid_tbc_Health, false);
+        StatModifierRaid40M_tbc_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.Mana", StatModifierRaid_tbc_Mana, false);
+        StatModifierRaid40M_tbc_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.Armor", StatModifierRaid_tbc_Armor, false);
+        StatModifierRaid40M_tbc_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.Damage", StatModifierRaid_tbc_Damage, false);
+        StatModifierRaid40M_tbc_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.tbc.CCDuration", StatModifierRaid_tbc_CCDuration, false);
+
+        StatModifierRaid40M_Boss_tbc_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.Global", StatModifierRaid_Boss_tbc_Global, false);
+        StatModifierRaid40M_Boss_tbc_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.Health", StatModifierRaid_Boss_tbc_Health, false);
+        StatModifierRaid40M_Boss_tbc_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.Mana", StatModifierRaid_Boss_tbc_Mana, false);
+        StatModifierRaid40M_Boss_tbc_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.Armor", StatModifierRaid_Boss_tbc_Armor, false);
+        StatModifierRaid40M_Boss_tbc_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.Damage", StatModifierRaid_Boss_tbc_Damage, false);
+        StatModifierRaid40M_Boss_tbc_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.tbc.CCDuration", StatModifierRaid_Boss_tbc_CCDuration, false);
+
+//Wrath of the lich king specific
+
+        
+// InflectionPoint* Wrath of the lich king
+
+        InflectionPoint_wotlk =                           sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.wotlk", 0.5f, false);
+        InflectionPointCurveFloor_wotlk =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveFloor.wotlk", 0.0f, false);
+        InflectionPointCurveCeiling_wotlk =               sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.CurveCeiling.wotlk", 1.0f, false);
+        InflectionPointBoss_wotlk =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPoint.BossModifier.wotlk", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointHeroic_wotlk =                     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.wotlk", 0.5f, false);
+        InflectionPointHeroicCurveFloor_wotlk =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveFloor.wotlk", 0.0f, false);
+        InflectionPointHeroicCurveCeiling_wotlk =         sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.CurveCeiling.wotlk", 1.0f, false);
+        InflectionPointHeroicBoss_wotlk =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointHeroic.BossModifier.wotlk", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid_wotlk =                       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.wotlk", 0.5f, false);
+        InflectionPointRaidCurveFloor_wotlk =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveFloor.wotlk", 0.0f, false);
+        InflectionPointRaidCurveCeiling_wotlk =           sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.CurveCeiling.wotlk", 1.0f, false);
+        InflectionPointRaidBoss_wotlk =                   sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid.BossModifier.wotlk", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaidHeroic_wotlk =                 sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.wotlk", 0.5f, false);
+        InflectionPointRaidHeroicCurveFloor_wotlk =       sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveFloor.wotlk", 0.0f, false);
+        InflectionPointRaidHeroicCurveCeiling_wotlk =     sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.CurveCeiling.wotlk", 1.0f, false);
+        InflectionPointRaidHeroicBoss_wotlk =             sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaidHeroic.BossModifier.wotlk", sConfigMgr->GetOption<float>("AutoBalance.BossInflectionMult", 1.0f, false), false); // `AutoBalance.BossInflectionMult` for backwards compatibility
+
+        InflectionPointRaid10M_wotlk =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.wotlk", InflectionPointRaid_wotlk, false);
+        InflectionPointRaid10MCurveFloor_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveFloor.wotlk", InflectionPointRaidCurveFloor_wotlk, false);
+        InflectionPointRaid10MCurveCeiling_wotlk =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.CurveCeiling.wotlk", InflectionPointRaidCurveCeiling_wotlk, false);
+        InflectionPointRaid10MBoss_wotlk =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10M.BossModifier.wotlk", InflectionPointRaidBoss_wotlk, false);
+
+        InflectionPointRaid10MHeroic_wotlk =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.wotlk", InflectionPointRaidHeroic_wotlk, false);
+        InflectionPointRaid10MHeroicCurveFloor_wotlk =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveFloor.wotlk", InflectionPointRaidHeroicCurveFloor_wotlk, false);
+        InflectionPointRaid10MHeroicCurveCeiling_wotlk =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.CurveCeiling.wotlk", InflectionPointRaidHeroicCurveCeiling_wotlk, false);
+        InflectionPointRaid10MHeroicBoss_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid10MHeroic.BossModifier.wotlk", InflectionPointRaidHeroicBoss_wotlk, false);
+
+        InflectionPointRaid15M_wotlk =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.wotlk", InflectionPointRaid_wotlk, false);
+        InflectionPointRaid15MCurveFloor_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveFloor.wotlk", InflectionPointRaidCurveFloor_wotlk, false);
+        InflectionPointRaid15MCurveCeiling_wotlk =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.CurveCeiling.wotlk", InflectionPointRaidCurveCeiling_wotlk, false);
+        InflectionPointRaid15MBoss_wotlk =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid15M.BossModifier.wotlk", InflectionPointRaidBoss_wotlk, false);
+
+        InflectionPointRaid20M_wotlk =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.wotlk", InflectionPointRaid_wotlk, false);
+        InflectionPointRaid20MCurveFloor_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveFloor.wotlk", InflectionPointRaidCurveFloor_wotlk, false);
+        InflectionPointRaid20MCurveCeiling_wotlk =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.CurveCeiling.wotlk", InflectionPointRaidCurveCeiling_wotlk, false);
+        InflectionPointRaid20MBoss_wotlk =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid20M.BossModifier.wotlk", InflectionPointRaidBoss_wotlk, false);
+
+        InflectionPointRaid25M_wotlk =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.wotlk", InflectionPointRaid_wotlk, false);
+        InflectionPointRaid25MCurveFloor_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveFloor.wotlk", InflectionPointRaidCurveFloor_wotlk, false);
+        InflectionPointRaid25MCurveCeiling_wotlk =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.CurveCeiling.wotlk", InflectionPointRaidCurveCeiling_wotlk, false);
+        InflectionPointRaid25MBoss_wotlk =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25M.BossModifier.wotlk", InflectionPointRaidBoss_wotlk, false);
+
+        InflectionPointRaid25MHeroic_wotlk =              sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.wotlk", InflectionPointRaidHeroic_wotlk, false);
+        InflectionPointRaid25MHeroicCurveFloor_wotlk =    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveFloor.wotlk", InflectionPointRaidHeroicCurveFloor_wotlk, false);
+        InflectionPointRaid25MHeroicCurveCeiling_wotlk =  sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.CurveCeiling.wotlk", InflectionPointRaidHeroicCurveCeiling_wotlk, false);
+        InflectionPointRaid25MHeroicBoss_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid25MHeroic.BossModifier.wotlk", InflectionPointRaidHeroicBoss_wotlk, false);
+
+        InflectionPointRaid40M_wotlk =                    sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.wotlk", InflectionPointRaid_wotlk, false);
+        InflectionPointRaid40MCurveFloor_wotlk =          sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveFloor.wotlk", InflectionPointRaidCurveFloor_wotlk, false);
+        InflectionPointRaid40MCurveCeiling_wotlk =        sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.CurveCeiling.wotlk", InflectionPointRaidCurveCeiling_wotlk, false);
+        InflectionPointRaid40MBoss_wotlk =                sConfigMgr->GetOption<float>("AutoBalance.InflectionPointRaid40M.BossModifier.wotlk", InflectionPointRaidBoss_wotlk, false);
+
+//statmodifiers Wrath of the lich king
+        // 5-player dungeons
+        StatModifier_wotlk_Global =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_wotlk_Health =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_wotlk_Mana =                         sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_wotlk_Armor =                        sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_wotlk_Damage =                       sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_wotlk_CCDuration =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.wotlk.CCDuration", -1.0f, false);
+
+        StatModifier_Boss_wotlk_Global =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifier_Boss_wotlk_Health =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifier_Boss_wotlk_Mana =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifier_Boss_wotlk_Armor =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifier_Boss_wotlk_Damage =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifier_Boss_wotlk_CCDuration =              sConfigMgr->GetOption<float>("AutoBalance.StatModifier.Boss.wotlk.CCDuration", -1.0f, false);
+
+        // 5-player heroic dungeons
+        StatModifierHeroic_wotlk_Global =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_wotlk_Health =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_wotlk_Mana =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_wotlk_Armor =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_wotlk_Damage =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_wotlk_CCDuration =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.wotlk.CCDuration", -1.0f, false);
+
+        StatModifierHeroic_Boss_wotlk_Global =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierHeroic_Boss_wotlk_Health =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierHeroic_Boss_wotlk_Mana =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierHeroic_Boss_wotlk_Armor =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierHeroic_Boss_wotlk_Damage =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierHeroic_Boss_wotlk_CCDuration =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierHeroic.Boss.wotlk.CCDuration", -1.0f, false);
+
+        // Default for all raids
+        StatModifierRaid_wotlk_Global =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_wotlk_Health =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_wotlk_Mana =                     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_wotlk_Armor =                    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_wotlk_Damage =                   sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_wotlk_CCDuration =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.wotlk.CCDuration", -1.0f, false);
+
+        StatModifierRaid_Boss_wotlk_Global =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaid_Boss_wotlk_Health =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaid_Boss_wotlk_Mana =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaid_Boss_wotlk_Armor =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaid_Boss_wotlk_Damage =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaid_Boss_wotlk_CCDuration =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid.Boss.wotlk.CCDuration", -1.0f, false);
+
+        // Default for all heroic raids
+        StatModifierRaidHeroic_wotlk_Global =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_wotlk_Health =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_wotlk_Mana =               sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_wotlk_Armor =              sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_wotlk_Damage =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_wotlk_CCDuration =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.wotlk.CCDuration", -1.0f, false);
+
+        StatModifierRaidHeroic_Boss_wotlk_Global =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.Global", sConfigMgr->GetOption<float>("AutoBalance.rate.global", 1.0f, false), false); // `AutoBalance.rate.global` for backwards compatibility
+        StatModifierRaidHeroic_Boss_wotlk_Health =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.Health", sConfigMgr->GetOption<float>("AutoBalance.rate.health", 1.0f, false), false); // `AutoBalance.rate.health` for backwards compatibility
+        StatModifierRaidHeroic_Boss_wotlk_Mana =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.Mana", sConfigMgr->GetOption<float>("AutoBalance.rate.mana", 1.0f, false), false); // `AutoBalance.rate.mana` for backwards compatibility
+        StatModifierRaidHeroic_Boss_wotlk_Armor =         sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.Armor", sConfigMgr->GetOption<float>("AutoBalance.rate.armor", 1.0f, false), false); // `AutoBalance.rate.armor` for backwards compatibility
+        StatModifierRaidHeroic_Boss_wotlk_Damage =        sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.Damage", sConfigMgr->GetOption<float>("AutoBalance.rate.damage", 1.0f, false), false); // `AutoBalance.rate.damage` for backwards compatibility
+        StatModifierRaidHeroic_Boss_wotlk_CCDuration =    sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaidHeroic.Boss.wotlk.CCDuration", -1.0f, false);
+
+        // 10-player raids
+        StatModifierRaid10M_wotlk_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.Global", StatModifierRaid_wotlk_Global, false);
+        StatModifierRaid10M_wotlk_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.Health", StatModifierRaid_wotlk_Health, false);
+        StatModifierRaid10M_wotlk_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.Mana", StatModifierRaid_wotlk_Mana, false);
+        StatModifierRaid10M_wotlk_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.Armor", StatModifierRaid_wotlk_Armor, false);
+        StatModifierRaid10M_wotlk_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.Damage", StatModifierRaid_wotlk_Damage, false);
+        StatModifierRaid10M_wotlk_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.wotlk.CCDuration", StatModifierRaid_wotlk_CCDuration, false);
+
+        StatModifierRaid10M_Boss_wotlk_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.Global", StatModifierRaid_Boss_wotlk_Global, false);
+        StatModifierRaid10M_Boss_wotlk_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.Health", StatModifierRaid_Boss_wotlk_Health, false);
+        StatModifierRaid10M_Boss_wotlk_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.Mana", StatModifierRaid_Boss_wotlk_Mana, false);
+        StatModifierRaid10M_Boss_wotlk_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.Armor", StatModifierRaid_Boss_wotlk_Armor, false);
+        StatModifierRaid10M_Boss_wotlk_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.Damage", StatModifierRaid_Boss_wotlk_Damage, false);
+        StatModifierRaid10M_Boss_wotlk_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10M.Boss.wotlk.CCDuration", StatModifierRaid_Boss_wotlk_CCDuration, false);
+
+        // 10-player heroic raids
+        StatModifierRaid10MHeroic_wotlk_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.Global", StatModifierRaidHeroic_wotlk_Global, false);
+        StatModifierRaid10MHeroic_wotlk_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.Health", StatModifierRaidHeroic_wotlk_Health, false);
+        StatModifierRaid10MHeroic_wotlk_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.Mana", StatModifierRaidHeroic_wotlk_Mana, false);
+        StatModifierRaid10MHeroic_wotlk_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.Armor", StatModifierRaidHeroic_wotlk_Armor, false);
+        StatModifierRaid10MHeroic_wotlk_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.Damage", StatModifierRaidHeroic_wotlk_Damage, false);
+        StatModifierRaid10MHeroic_wotlk_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.wotlk.CCDuration", StatModifierRaidHeroic_wotlk_CCDuration, false);
+
+        StatModifierRaid10MHeroic_Boss_wotlk_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.Global", StatModifierRaidHeroic_Boss_wotlk_Global, false);
+        StatModifierRaid10MHeroic_Boss_wotlk_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.Health", StatModifierRaidHeroic_Boss_wotlk_Health, false);
+        StatModifierRaid10MHeroic_Boss_wotlk_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.Mana", StatModifierRaidHeroic_Boss_wotlk_Mana, false);
+        StatModifierRaid10MHeroic_Boss_wotlk_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.Armor", StatModifierRaidHeroic_Boss_wotlk_Armor, false);
+        StatModifierRaid10MHeroic_Boss_wotlk_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.Damage", StatModifierRaidHeroic_Boss_wotlk_Damage, false);
+        StatModifierRaid10MHeroic_Boss_wotlk_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid10MHeroic.Boss.wotlk.CCDuration", StatModifierRaidHeroic_Boss_wotlk_CCDuration, false);
+
+        // 15-player raids
+        StatModifierRaid15M_wotlk_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.Global", StatModifierRaid_wotlk_Global, false);
+        StatModifierRaid15M_wotlk_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.Health", StatModifierRaid_wotlk_Health, false);
+        StatModifierRaid15M_wotlk_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.Mana", StatModifierRaid_wotlk_Mana, false);
+        StatModifierRaid15M_wotlk_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.Armor", StatModifierRaid_wotlk_Armor, false);
+        StatModifierRaid15M_wotlk_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.Damage", StatModifierRaid_wotlk_Damage, false);
+        StatModifierRaid15M_wotlk_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.wotlk.CCDuration", StatModifierRaid_wotlk_CCDuration, false);
+
+        StatModifierRaid15M_Boss_wotlk_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.Global", StatModifierRaid_Boss_wotlk_Global, false);
+        StatModifierRaid15M_Boss_wotlk_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.Health", StatModifierRaid_Boss_wotlk_Health, false);
+        StatModifierRaid15M_Boss_wotlk_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.Mana", StatModifierRaid_Boss_wotlk_Mana, false);
+        StatModifierRaid15M_Boss_wotlk_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.Armor", StatModifierRaid_Boss_wotlk_Armor, false);
+        StatModifierRaid15M_Boss_wotlk_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.Damage", StatModifierRaid_Boss_wotlk_Damage, false);
+        StatModifierRaid15M_Boss_wotlk_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid15M.Boss.wotlk.CCDuration", StatModifierRaid_Boss_wotlk_CCDuration, false);
+
+        // 20-player raids
+        StatModifierRaid20M_wotlk_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.Global", StatModifierRaid_wotlk_Global, false);
+        StatModifierRaid20M_wotlk_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.Health", StatModifierRaid_wotlk_Health, false);
+        StatModifierRaid20M_wotlk_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.Mana", StatModifierRaid_wotlk_Mana, false);
+        StatModifierRaid20M_wotlk_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.Armor", StatModifierRaid_wotlk_Armor, false);
+        StatModifierRaid20M_wotlk_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.Damage", StatModifierRaid_wotlk_Damage, false);
+        StatModifierRaid20M_wotlk_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.wotlk.CCDuration", StatModifierRaid_wotlk_CCDuration, false);
+
+        StatModifierRaid20M_Boss_wotlk_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.Global", StatModifierRaid_Boss_wotlk_Global, false);
+        StatModifierRaid20M_Boss_wotlk_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.Health", StatModifierRaid_Boss_wotlk_Health, false);
+        StatModifierRaid20M_Boss_wotlk_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.Mana", StatModifierRaid_Boss_wotlk_Mana, false);
+        StatModifierRaid20M_Boss_wotlk_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.Armor", StatModifierRaid_Boss_wotlk_Armor, false);
+        StatModifierRaid20M_Boss_wotlk_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.Damage", StatModifierRaid_Boss_wotlk_Damage, false);
+        StatModifierRaid20M_Boss_wotlk_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid20M.Boss.wotlk.CCDuration", StatModifierRaid_Boss_wotlk_CCDuration, false);
+
+        // 25-player raids
+        StatModifierRaid25M_wotlk_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.Global", StatModifierRaid_wotlk_Global, false);
+        StatModifierRaid25M_wotlk_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.Health", StatModifierRaid_wotlk_Health, false);
+        StatModifierRaid25M_wotlk_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.Mana", StatModifierRaid_wotlk_Mana, false);
+        StatModifierRaid25M_wotlk_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.Armor", StatModifierRaid_wotlk_Armor, false);
+        StatModifierRaid25M_wotlk_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.Damage", StatModifierRaid_wotlk_Damage, false);
+        StatModifierRaid25M_wotlk_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.wotlk.CCDuration", StatModifierRaid_wotlk_CCDuration, false);
+
+        StatModifierRaid25M_Boss_wotlk_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.Global", StatModifierRaid_Boss_wotlk_Global, false);
+        StatModifierRaid25M_Boss_wotlk_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.Health", StatModifierRaid_Boss_wotlk_Health, false);
+        StatModifierRaid25M_Boss_wotlk_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.Mana", StatModifierRaid_Boss_wotlk_Mana, false);
+        StatModifierRaid25M_Boss_wotlk_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.Armor", StatModifierRaid_Boss_wotlk_Armor, false);
+        StatModifierRaid25M_Boss_wotlk_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.Damage", StatModifierRaid_Boss_wotlk_Damage, false);
+        StatModifierRaid25M_Boss_wotlk_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25M.Boss.wotlk.CCDuration", StatModifierRaid_Boss_wotlk_CCDuration, false);
+
+        // 25-player heroic raids
+        StatModifierRaid25MHeroic_wotlk_Global =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.Global", StatModifierRaidHeroic_wotlk_Global, false);
+        StatModifierRaid25MHeroic_wotlk_Health =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.Health", StatModifierRaidHeroic_wotlk_Health, false);
+        StatModifierRaid25MHeroic_wotlk_Mana =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.Mana", StatModifierRaidHeroic_wotlk_Mana, false);
+        StatModifierRaid25MHeroic_wotlk_Armor =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.Armor", StatModifierRaidHeroic_wotlk_Armor, false);
+        StatModifierRaid25MHeroic_wotlk_Damage =          sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.Damage", StatModifierRaidHeroic_wotlk_Damage, false);
+        StatModifierRaid25MHeroic_wotlk_CCDuration =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.wotlk.CCDuration", StatModifierRaidHeroic_wotlk_CCDuration, false);
+
+        StatModifierRaid25MHeroic_Boss_wotlk_Global =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.Global", StatModifierRaidHeroic_Boss_wotlk_Global, false);
+        StatModifierRaid25MHeroic_Boss_wotlk_Health =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.Health", StatModifierRaidHeroic_Boss_wotlk_Health, false);
+        StatModifierRaid25MHeroic_Boss_wotlk_Mana =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.Mana", StatModifierRaidHeroic_Boss_wotlk_Mana, false);
+        StatModifierRaid25MHeroic_Boss_wotlk_Armor =      sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.Armor", StatModifierRaidHeroic_Boss_wotlk_Armor, false);
+        StatModifierRaid25MHeroic_Boss_wotlk_Damage =     sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.Damage", StatModifierRaidHeroic_Boss_wotlk_Damage, false);
+        StatModifierRaid25MHeroic_Boss_wotlk_CCDuration = sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid25MHeroic.Boss.wotlk.CCDuration", StatModifierRaidHeroic_Boss_wotlk_CCDuration, false);
+
+        // 40-player raids
+        StatModifierRaid40M_wotlk_Global =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.Global", StatModifierRaid_wotlk_Global, false);
+        StatModifierRaid40M_wotlk_Health =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.Health", StatModifierRaid_wotlk_Health, false);
+        StatModifierRaid40M_wotlk_Mana =                  sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.Mana", StatModifierRaid_wotlk_Mana, false);
+        StatModifierRaid40M_wotlk_Armor =                 sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.Armor", StatModifierRaid_wotlk_Armor, false);
+        StatModifierRaid40M_wotlk_Damage =                sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.Damage", StatModifierRaid_wotlk_Damage, false);
+        StatModifierRaid40M_wotlk_CCDuration =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.wotlk.CCDuration", StatModifierRaid_wotlk_CCDuration, false);
+
+        StatModifierRaid40M_Boss_wotlk_Global =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.Global", StatModifierRaid_Boss_wotlk_Global, false);
+        StatModifierRaid40M_Boss_wotlk_Health =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.Health", StatModifierRaid_Boss_wotlk_Health, false);
+        StatModifierRaid40M_Boss_wotlk_Mana =             sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.Mana", StatModifierRaid_Boss_wotlk_Mana, false);
+        StatModifierRaid40M_Boss_wotlk_Armor =            sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.Armor", StatModifierRaid_Boss_wotlk_Armor, false);
+        StatModifierRaid40M_Boss_wotlk_Damage =           sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.Damage", StatModifierRaid_Boss_wotlk_Damage, false);
+        StatModifierRaid40M_Boss_wotlk_CCDuration =       sConfigMgr->GetOption<float>("AutoBalance.StatModifierRaid40M.Boss.wotlk.CCDuration", StatModifierRaid_Boss_wotlk_CCDuration, false);
+
+
+
         // Modifier Min/Max
         MinHPModifier = sConfigMgr->GetOption<float>("AutoBalance.MinHPModifier", 0.1f);
         MinManaModifier = sConfigMgr->GetOption<float>("AutoBalance.MinManaModifier", 0.01f);
@@ -3465,6 +5606,7 @@ class AutoBalance_WorldScript : public WorldScript
 
         // Announcement
         Announcement = sConfigMgr->GetOption<bool>("AutoBalanceAnnounce.enable", true);
+        EnableExpasionMode =  sConfigMgr->GetOption<bool>("AutoBalanceExpansionMode.enable", true);
 
     }
 };
@@ -3480,7 +5622,7 @@ class AutoBalance_PlayerScript : public PlayerScript
         void OnLogin(Player *Player) override
         {
             if (EnableGlobal && Announcement) {
-                ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule.");
+                ChatHandler(Player->GetSession()).SendSysMessage("This server is running the |cff4CFF00AutoBalance |rmodule. Covertmonkey Fork");
             }
         }
 
@@ -6689,6 +8831,7 @@ public:
         }
     }
 };
+
 
 
 
